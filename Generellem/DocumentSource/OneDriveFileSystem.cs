@@ -27,7 +27,6 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
     public string Reference { get; set; } = string.Empty;
 
     readonly IEnumerable<string> DocExtensions = DocumentTypeFactory.GetSupportedDocumentTypes();
-    readonly string OneDriveErrorMessage = $"Please set {GKeys.OneDriveUserName} via IDynamicConfiguration with the user name for the OneDrive account that we're reading from.";
 
     readonly string? baseUrl;
     readonly string? userId;
@@ -49,13 +48,8 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
     }
 
     /// <summary>
-    /// Based on the config file, scan files.
+    /// Based on the configured paths, scan files.
     /// </summary>
-    /// <remarks>
-    /// Callers should set the BaseUrl in the config file, environment variable, 
-    /// or dynamic configuration based on a website location. We use this to
-    /// build a callback for MSGraph authentication.
-    /// </remarks>
     /// <param name="cancelToken"><see cref="CancellationToken"/></param>
     /// <returns>Enumerable of <see cref="DocumentInfo"/>.</returns>
     public async IAsyncEnumerable<DocumentInfo> GetDocumentsAsync([EnumeratorCancellation] CancellationToken cancelToken)
@@ -63,7 +57,7 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
         ArgumentNullException.ThrowIfNullOrWhiteSpace(baseUrl, nameof(baseUrl));
         ArgumentNullException.ThrowIfNullOrWhiteSpace(userId, nameof(userId));
 
-        GraphServiceClient graphClient = msGraphFact.Create(Scopes.OneDrive, baseUrl, userId, MSGraphTokenType.OneDrive);
+        GraphServiceClient graphClient = msGraphFact.Create(GKeys.OneDriveScopes, baseUrl, userId, MSGraphTokenType.OneDrive);
         User? user = await graphClient.Me.GetAsync();
 
         if (user is not null)
@@ -96,7 +90,6 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
 
                 IDocumentType docType = DocumentTypeFactory.Create(fileName);
 
-                    // Get the stream for each file
                 Stream? fileStream = await graphClient.Drives[driveId].Items[file.Id].Content.GetAsync();
                 yield return new DocumentInfo(Reference, fileStream, docType, filePath, specDescription);
 
