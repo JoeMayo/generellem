@@ -43,6 +43,7 @@ public class GKeys
     public const string MSGraphClientID = "MSGraphClientID";
     public const string MSGraphClientSecret = "MSGraphClientSecret";
     public const string OneDriveUserName = "OneDriveUserName";
+    public const string OneDriveScopes = "user.read files.read.all offline_access";
     public const string SharedDocumentsID = "Shared Documents";
     public const string SharePointUserName = "SharePointUserName";
     public const string UserID = "UserID";
