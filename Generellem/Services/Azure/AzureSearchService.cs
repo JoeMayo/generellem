@@ -270,4 +270,9 @@ public class AzureSearchService(IDynamicConfiguration config, ILogger<AzureSearc
     {
         throw new NotImplementedException();
     }
+
+    public Task DeleteAllAsync(int companyId, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
 }

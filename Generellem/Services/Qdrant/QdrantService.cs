@@ -105,6 +105,39 @@ public class QdrantService(IDynamicConfiguration config, ILogger<QdrantService> 
             
         return collectionExists;
     }
+    
+    public async Task DeleteAllAsync(int companyId, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantApiKey, nameof(QdrantApiKey));
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantEndpoint, nameof(QdrantEndpoint));
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantCollection, nameof(QdrantCollection));
+
+        Filter filter = new()
+        {
+            Must =
+            {
+                new Condition
+                {
+                    Field = new FieldCondition { Key = TenantID, Match = new Match { Keyword = companyId.ToString() } },
+                }
+            }
+        };
+
+        try
+        {
+            Uri endpoint = new(QdrantEndpoint);
+            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
+
+            UpdateResult result =
+                await pipeline.ExecuteAsync(
+                    async token => await client.DeleteAsync(QdrantCollection, filter),
+                    cancellationToken);
+        }
+        catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound)
+        {
+            // 404 indicates the index does not exist
+        }
+    }
 
     public async Task DeleteDocumentReferencesAsync(List<string> idsToDelete, CancellationToken cancellationToken)
     {
