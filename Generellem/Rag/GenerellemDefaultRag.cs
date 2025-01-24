@@ -15,13 +15,13 @@ using System.Text;
 namespace Generellem.Rag;
 
 /// <summary>
-/// Performs Retrieval-Augmented Generation (RAG) for Azure OpenAI.
+/// Performs Retrieval-Augmented Generation (RAG).
 /// </summary>
 /// <remarks>
 /// Inspired by Retrieval-Augmented Generation (RAG)/Bea Stollnitz at https://bea.stollnitz.com/blog/rag/
 /// </remarks>
 public class GenerellemDefaultRag(
-    ISearchService azSearchSvc,
+    ISearchService searchSvc,
     IDynamicConfiguration config,
     IEmbedding embedding,
     ILlm llm,
@@ -159,7 +159,7 @@ public class GenerellemDefaultRag(
         {
             ReadOnlyMemory<float> embeddingVector = await embedding.GetEmbeddingAsync(text, cancellationToken);
 
-            List<TextChunk> chunks = await azSearchSvc.SearchAsync(embeddingVector, cancellationToken);
+            List<TextChunk> chunks = await searchSvc.SearchAsync(embeddingVector, cancellationToken);
 
             return chunks;
         }
