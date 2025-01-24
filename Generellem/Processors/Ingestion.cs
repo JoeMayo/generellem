@@ -47,24 +47,6 @@ public class Ingestion(
 #endif
 
     /// <summary>
-    /// Creates an Azure Search index (if it doesn't already exist), uploads document chunks, and indexes the chunks.
-    /// </summary>
-    /// <param name="doc"><see cref="DocumentInfo"/></param>
-    /// <param name="fullText">Plaintext of document.</param>
-    /// <param name="docSrc"><see cref="IDocumentSource"/></param>
-    /// <param name="progress">Reports progress.</param>
-    /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
-    public virtual async Task InsertOrUpdateDocumentAsync(DocumentInfo doc, string fullText, IDocumentSource docSrc, IProgress<IngestionProgress> progress, CancellationToken cancellationToken)
-    {
-        if (doc?.DocType is null)
-            return;
-
-        List<TextChunk> chunks = await embedding.EmbedAsync(fullText, doc.DocType, doc.DocumentReference, progress, cancellationToken);
-        await searchSvc.CreateIndexAsync(cancellationToken);
-        await searchSvc.UploadDocumentsAsync(chunks, cancellationToken);
-    }
-
-    /// <summary>
     /// Recursive search of documents from specified document sources
     /// </summary>
     /// <param name="progress">Lets the caller receive progress updates.</param>
@@ -132,6 +114,24 @@ public class Ingestion(
         }
 
         progress.Report(new($"Ingestion is complete. Total documents processed for this job: {count}"));
+    }
+    
+    /// <summary>
+    /// Creates an Azure Search index (if it doesn't already exist), uploads document chunks, and indexes the chunks.
+    /// </summary>
+    /// <param name="doc"><see cref="DocumentInfo"/></param>
+    /// <param name="fullText">Plaintext of document.</param>
+    /// <param name="docSrc"><see cref="IDocumentSource"/></param>
+    /// <param name="progress">Reports progress.</param>
+    /// <param name="cancellationToken"><see cref="CancellationToken"/></param>
+    public virtual async Task InsertOrUpdateDocumentAsync(DocumentInfo doc, string fullText, IDocumentSource docSrc, IProgress<IngestionProgress> progress, CancellationToken cancellationToken)
+    {
+        if (doc?.DocType is null)
+            return;
+
+        List<TextChunk> chunks = await embedding.EmbedAsync(fullText, doc.DocType, doc.DocumentReference, progress, cancellationToken);
+        await searchSvc.CreateIndexAsync(cancellationToken);
+        await searchSvc.UploadDocumentsAsync(chunks, cancellationToken);
     }
 
     /// <summary>

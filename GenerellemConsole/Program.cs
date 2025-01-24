@@ -7,7 +7,7 @@ using Generellem.Processors;
 using Generellem.Rag;
 using Generellem.Repository;
 using Generellem.Services;
-using Generellem.Services.Azure;
+using Generellem.Services.Qdrant;
 
 using GenerellemConsole;
 
