@@ -40,6 +40,14 @@ public class GKeys
     public const string CosmosDatabase = "GenerellemCosmosDatabase";
 
     //
+    // Cosmos DB
+    //
+
+    public const string CosmosConnectionString = "GenerellemCosmosConnectionString";
+    public const string CosmosContainer = "GenerellemCosmosContainer";
+    public const string CosmosDatabase = "GenerellemCosmosDatabase";
+
+    //
     // MS Graph
     //
 
