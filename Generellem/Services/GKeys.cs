@@ -35,10 +35,6 @@ public class GKeys
     public const string AzSearchServiceEndpoint = "GenerellemAzSearchServiceEndpoint";
     public const string AzSearchServiceIndex = "GenerellemAzSearchServiceIndex";
 
-    public const string CosmosConnectionString = "GenerellemCosmosConnectionString";
-    public const string CosmosContainer = "GenerellemCosmosContainer";
-    public const string CosmosDatabase = "GenerellemCosmosDatabase";
-
     //
     // Cosmos DB
     //
