@@ -73,7 +73,7 @@ public class Ingestion(
                 ArgumentException.ThrowIfNullOrEmpty(doc.DocPath);
                 ArgumentException.ThrowIfNullOrEmpty(doc.DocumentReference);
 
-                 if (doc.DocType.GetType() == typeof(Unknown))
+                if (doc.DocType.GetType() == typeof(Unknown))
                     continue;
 
                 string fullText;
