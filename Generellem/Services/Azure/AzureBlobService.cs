@@ -11,7 +11,15 @@ public class AzureBlobService : IAzureBlobService
 {
     readonly ResiliencePipeline pipeline =
         new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions())
+            .AddRetry(
+                new RetryStrategyOptions
+                {
+                    ShouldHandle = new PredicateBuilder().Handle<Exception>(),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,  // Adds a random factor to the delay
+                    MaxRetryAttempts = 10,
+                    Delay = TimeSpan.FromSeconds(3),
+                })
             .AddTimeout(TimeSpan.FromSeconds(3))
             .Build();
 
@@ -26,9 +34,10 @@ public class AzureBlobService : IAzureBlobService
 
         BlobClient blobClient = new(connStr, container, fileName);
 
-        Response<BlobContentInfo> blobInfo = await pipeline.ExecuteAsync(
-            async token => await blobClient.UploadAsync(stream, overwrite: true, token),
-            cancelToken);
+        Response<BlobContentInfo> blobInfo = 
+            await pipeline.ExecuteAsync(
+                async token => await blobClient.UploadAsync(stream, overwrite: true, token),
+                cancelToken);
 
         return blobInfo.Value;
     }
@@ -41,9 +50,10 @@ public class AzureBlobService : IAzureBlobService
 
         BlobClient blobClient = new(connStr, container, fileName);
 
-        BlobDownloadInfo blobInfo = await pipeline.ExecuteAsync<BlobDownloadInfo>(
-            async token => await blobClient.DownloadAsync(cancelToken),
-            cancelToken);
+        BlobDownloadInfo blobInfo = 
+            await pipeline.ExecuteAsync<BlobDownloadInfo>(
+                async token => await blobClient.DownloadAsync(cancelToken),
+                cancelToken);
 
         return blobInfo.Content;
     }

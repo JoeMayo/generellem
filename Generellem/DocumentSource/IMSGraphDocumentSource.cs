@@ -16,5 +16,5 @@ public interface IMSGraphDocumentSource : IDocumentSource
     /// <param name="driveId">Unique ID for drive to query.</param>
     /// <param name="path">Location on drive to start at.</param>
     /// <returns><see cref="DriveItem"/></returns>
-    Task<List<DriveItem>> GetFilesAsync(GraphServiceClient graphClient, string driveId, string path);
+    IAsyncEnumerable<DriveItem> GetFilesAsync(GraphServiceClient graphClient, string driveId, string path);
 }

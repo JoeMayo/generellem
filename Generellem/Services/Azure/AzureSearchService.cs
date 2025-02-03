@@ -27,7 +27,15 @@ public class AzureSearchService(IDynamicConfiguration config, ILogger<AzureSearc
 
     readonly ResiliencePipeline pipeline = 
         new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions())
+            .AddRetry(
+                new RetryStrategyOptions
+                {
+                    ShouldHandle = new PredicateBuilder().Handle<Exception>(),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,  // Adds a random factor to the delay
+                    MaxRetryAttempts = 10,
+                    Delay = TimeSpan.FromSeconds(3),
+                })
             .AddTimeout(TimeSpan.FromSeconds(3))
             .Build();
 

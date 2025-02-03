@@ -1,14 +1,10 @@
 ﻿using Generellem.Document.DocumentTypes;
 using Generellem.Processors;
 
-using Polly;
-
 namespace Generellem.Embedding;
 
 public interface IEmbedding
 {
-    ResiliencePipeline Pipeline { get; set; }
-
     /// <summary>
     /// Takes a raw document, turns it into text, and creates an embedding.
     /// </summary>
