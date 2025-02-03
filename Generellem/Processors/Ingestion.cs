@@ -7,9 +7,11 @@ using Generellem.Services;
 using Microsoft.Extensions.Logging;
 
 using Polly;
+using Polly.Retry;
 
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace Generellem.Processors;
 
@@ -26,26 +28,6 @@ public class Ingestion(
 {
     const string EmptyText = "<empty>";
 
-#if DEBUG
-    readonly ResiliencePipeline pipeline =
-    new ResiliencePipelineBuilder()
-        .AddRetry(new()
-        {
-            ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => false)
-        })
-        .AddTimeout(TimeSpan.FromSeconds(1))
-        .Build();
-#else
-    readonly ResiliencePipeline pipeline =
-        new ResiliencePipelineBuilder()
-            .AddRetry(new()
-            {
-                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => ex is not Generellem.Services.Exceptions.GenerellemNeedsIngestionException)
-            })
-            .AddTimeout(TimeSpan.FromSeconds(7))
-            .Build();
-#endif
-
     /// <summary>
     /// Recursive search of documents from specified document sources
     /// </summary>
@@ -58,6 +40,8 @@ public class Ingestion(
         IEnumerable<IDocumentSource> docSources = docSourceFact.GetDocumentSources();
 
         progress.Report(new($"Processing document sources..."));
+
+        await searchSvc.CreateIndexAsync(cancelToken);
 
         foreach (IDocumentSource docSource in docSources)
         {
@@ -101,8 +85,6 @@ public class Ingestion(
 
                 await InsertOrUpdateDocumentAsync(doc, fullText, docSource, progress, cancelToken);
 
-                //logger.LogInformation($"{DateTime.Now} {doc.DocumentReference} added to index.");
-
                 if (cancelToken.IsCancellationRequested)
                     break;
             }
@@ -130,7 +112,6 @@ public class Ingestion(
             return;
 
         List<TextChunk> chunks = await embedding.EmbedAsync(fullText, doc.DocType, doc.DocumentReference, progress, cancellationToken);
-        await searchSvc.CreateIndexAsync(cancellationToken);
         await searchSvc.UploadDocumentsAsync(chunks, cancellationToken);
     }
 

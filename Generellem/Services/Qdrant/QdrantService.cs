@@ -32,7 +32,15 @@ public class QdrantService(IDynamicConfiguration config, ILogger<QdrantService> 
 
     readonly ResiliencePipeline pipeline =
         new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions())
+            .AddRetry(
+                new RetryStrategyOptions
+                {
+                    ShouldHandle = new PredicateBuilder().Handle<Exception>(),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,  // Adds a random factor to the delay
+                    MaxRetryAttempts = 10,
+                    Delay = TimeSpan.FromSeconds(3),
+                })
             .AddTimeout(TimeSpan.FromSeconds(3))
             .Build();
 
@@ -95,7 +103,9 @@ public class QdrantService(IDynamicConfiguration config, ILogger<QdrantService> 
             Uri endpoint = new(QdrantEndpoint);
             QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
 
-            collectionExists = await client.CollectionExistsAsync(QdrantCollection);
+            collectionExists = 
+                await pipeline.ExecuteAsync(async _ => 
+                    await client.CollectionExistsAsync(QdrantCollection), cancellationToken);
         }
         catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound || rpcEx.StatusCode == StatusCode.Unimplemented)
         {

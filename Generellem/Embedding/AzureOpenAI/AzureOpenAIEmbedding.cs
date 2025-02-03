@@ -28,13 +28,11 @@ public class AzureOpenAIEmbedding(
         new ResiliencePipelineBuilder()
             .AddRetry(new()
             {
-                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => ex is not GenerellemNeedsIngestionException)
-            })
-            .AddRetry(new()
-            {
+                ShouldHandle = new PredicateBuilder().Handle<Exception>(ex => ex is not GenerellemNeedsIngestionException),
                 BackoffType = DelayBackoffType.Exponential,
-                Delay = TimeSpan.FromSeconds(5),
-                MaxRetryAttempts = 5,
+                UseJitter = true,  // Adds a random factor to the delay
+                MaxRetryAttempts = 10,
+                Delay = TimeSpan.FromSeconds(3),
                 OnRetry = static args =>
                 {
                     currentProgress?.Report(new("System busy, delaying a few seconds..."));
@@ -62,7 +60,7 @@ public class AzureOpenAIEmbedding(
         int count = 0;
         string plural = chunkCount == 1 ? "" : "s";
 
-        EmbeddingClient embedingClient = llmClientFact.CreateEmbeddingClient();
+        EmbeddingClient embeddingClient = llmClientFact.CreateEmbeddingClient();
 
         foreach (TextChunk chunk in chunks)
         {
@@ -73,9 +71,10 @@ public class AzureOpenAIEmbedding(
 
             try
             {
-                ClientResult<OpenAIEmbedding> embeddingResult = await Pipeline.ExecuteAsync(
-                    async token => await embedingClient.GenerateEmbeddingAsync(chunk.Content),
-                    cancellationToken);
+                ClientResult<OpenAIEmbedding> embeddingResult = 
+                    await Pipeline.ExecuteAsync(
+                        async _ => await embeddingClient.GenerateEmbeddingAsync(chunk.Content),
+                        cancellationToken);
 
                 chunk.Embedding = embeddingResult.Value.ToFloats();
             }
@@ -93,9 +92,10 @@ public class AzureOpenAIEmbedding(
     {
         EmbeddingClient embedingClient = llmClientFact.CreateEmbeddingClient();
 
-        ClientResult<OpenAIEmbedding> embeddingResult = await Pipeline.ExecuteAsync(
-            async token => await embedingClient.GenerateEmbeddingAsync(text),
-            cancellationToken);
+        ClientResult<OpenAIEmbedding> embeddingResult = 
+            await Pipeline.ExecuteAsync(
+                async _ => await embedingClient.GenerateEmbeddingAsync(text),
+                cancellationToken);
 
         return embeddingResult.Value.ToFloats();
     }

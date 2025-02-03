@@ -6,6 +6,9 @@ using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Models.ODataErrors;
 
+using Polly;
+using Polly.Retry;
+
 using System.Net;
 using System.Runtime.CompilerServices;
 
@@ -33,6 +36,20 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
 
     readonly IMSGraphClientFactory msGraphFact;
     readonly IPathProvider pathProvider;
+
+        readonly ResiliencePipeline pipeline =
+        new ResiliencePipelineBuilder()
+            .AddRetry(
+                new RetryStrategyOptions
+                {
+                    ShouldHandle = new PredicateBuilder().Handle<Exception>(),
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,  // Adds a random factor to the delay
+                    MaxRetryAttempts = 10,
+                    Delay = TimeSpan.FromSeconds(3),
+                })
+            .AddTimeout(TimeSpan.FromSeconds(3))
+            .Build();
 
     public OneDriveFileSystem(
         string baseUrl,
@@ -79,10 +96,8 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
 
             if (driveId is null)
                 continue;
-
-            List<DriveItem> files = await GetFilesAsync(graphClient, driveId, path);
             
-            foreach (var file in files)
+            await foreach (DriveItem file in GetFilesAsync(graphClient, driveId, path))
             {
                 string fileName = file.Name ?? string.Empty;
                 string folder = file.ParentReference?.Path?.Substring(file.ParentReference.Path.IndexOf(':') + 1) ?? string.Empty;
@@ -97,7 +112,6 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
                     break;
             }
 
-
             if (cancelToken.IsCancellationRequested)
                 break;
         }
@@ -110,48 +124,50 @@ public class OneDriveFileSystem : IMSGraphDocumentSource
     /// <param name="driveId">Unique ID for drive to query.</param>
     /// <param name="path">Location on drive to start at.</param>
     /// <returns><see cref="DriveItem"/></returns>
-    public async Task<List<DriveItem>> GetFilesAsync(GraphServiceClient graphClient, string driveId, string path)
+    public async IAsyncEnumerable<DriveItem> GetFilesAsync(GraphServiceClient graphClient, string driveId, string path)
     {
-        DriveItem? driveItem = null;
+        DriveItem? pathItem = null;
         try
         {
-            driveItem = await graphClient.Drives[driveId].Root
-                .ItemWithPath(path)
-                .GetAsync();
+            pathItem = 
+                await graphClient
+                    .Drives[driveId].Root
+                    .ItemWithPath(path)
+                    .GetAsync();
         }
         catch (ODataError ex) when (ex.ResponseStatusCode == (int)HttpStatusCode.NotFound)
         {
             // ignore the error and continue
             // TODO: consider the possibility that we should notify the user that this folder does not exist anymore.
-            driveItem = null;
+            pathItem = null;
         }
 
-        if (driveItem is null)
-            return new();
+        if (pathItem is null)
+            yield break;
 
-        return await GetFilesRecursively(graphClient, driveItem, driveId);
+        await foreach(DriveItem driveItem in GetFilesRecursively(graphClient, pathItem, driveId))
+            yield return driveItem;
     }
 
-    async Task<List<DriveItem>> GetFilesRecursively(GraphServiceClient graphClient, DriveItem driveItem, string driveId)
+    async IAsyncEnumerable<DriveItem> GetFilesRecursively(GraphServiceClient graphClient, DriveItem driveItem, string driveId)
     {
-        List<DriveItem> files = new List<DriveItem>();
-
         if (driveItem.Folder == null)
         {
-            files.Add(driveItem);
+            yield return driveItem;
         }
         else
         {
             // TODO: use Polly here to back off exponentially on 429 errors
-            DriveItemCollectionResponse? children = await graphClient.Drives[driveId].Items[driveItem.Id].Children.GetAsync();
+            DriveItemCollectionResponse? children = 
+                await pipeline.ExecuteAsync(async _ =>
+                    await graphClient.Drives[driveId].Items[driveItem.Id].Children.GetAsync());
 
             if (children?.Value is null)
-                return files;
+                yield break;
 
             foreach (DriveItem child in children.Value)
-                files.AddRange(await GetFilesRecursively(graphClient, child, driveId));
+                await foreach(DriveItem childDriveItem in GetFilesRecursively(graphClient, child, driveId))
+                    yield return childDriveItem;
         }
-
-        return files;
     }
 }
