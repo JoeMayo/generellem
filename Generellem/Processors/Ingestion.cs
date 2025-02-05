@@ -142,6 +142,7 @@ public class Ingestion(
                 logger.LogError(
                     "Unable to insert doc hash - {DocumentReference}, {DocumentHash}, {Exception}",
                     doc.DocumentReference, newHash, ex);
+                return false;
             }
         else if (document.Hash != newHash)
             try
@@ -153,6 +154,7 @@ public class Ingestion(
                 logger.LogError(
                     "Unable to update doc hash - {DocumentReference}, {DocumentHash}, {Exception}",
                     doc.DocumentReference, newHash, ex);
+                return false;
             }
         else
             return false;
