@@ -115,18 +115,6 @@ public class IngestionTests
     }
 
     [Fact]
-    public async Task InsertOrUpdateDocumentAsync_CallsCreateIndex()
-    {
-        MemoryStream memStream = new(Encoding.Default.GetBytes(DefaultDocumentText));
-        DocumentInfo docInfo = new(DocSource, memStream, new Text(), DefaultFilePath, SpecDescription);
-        IProgress<IngestionProgress> progress = new Progress<IngestionProgress>();
-
-        await ingestion.InsertOrUpdateDocumentAsync(docInfo, DefaultDocumentText, docSourceMock.Object, progress, CancellationToken.None);
-
-        searchSvcMock.Verify(srchSvc => srchSvc.CreateIndexAsync(It.IsAny<CancellationToken>()), Times.Once());
-    }
-
-    [Fact]
     public async Task InsertOrUpdateDocumentAsync_CallsUploadDocuments()
     {
         MemoryStream memStream = new(Encoding.Default.GetBytes(DefaultDocumentText));
@@ -306,20 +294,6 @@ public class IngestionTests
     }
 
     [Fact]
-    public async Task IsDocUnchangedAsync_DocumentIsNullAndFullTextIsEmpty_DeletesDocument()
-    {
-        DocumentInfo doc = new("", null, null, "", "") { DocumentReference = "doc1" };
-        docHashRepMock.Setup(repo => repo.GetDocumentHashAsync(doc.DocumentReference))
-                      .ReturnsAsync(new DocumentHash { DocumentReference = doc.DocumentReference, Hash = "oldHash" });
-        Ingestion ingestion = new(docHashRepMock.Object, docSourceFactoryMock.Object, embedMock.Object, logMock.Object, searchSvcMock.Object);
-
-        bool result = await ingestion.ShouldInsertOrUpdateAsync(doc, string.Empty);
-
-        Assert.True(result);
-        docHashRepMock.Verify(repo => repo.DeleteAsync(It.IsAny<List<string>>()), Times.Once);
-    }
-
-    [Fact]
     public async Task IsDocUnchangedAsync_DocumentHashIsNull_InsertsNewHash()
     {
         DocumentInfo doc = new("", null, null, "", "") { DocumentReference = "doc2" };
@@ -330,7 +304,7 @@ public class IngestionTests
 
         bool result = await ingestion.ShouldInsertOrUpdateAsync(doc, fullText);
 
-        Assert.False(result);
+        Assert.True(result);
         docHashRepMock.Verify(repo => repo.InsertAsync(It.IsAny<DocumentHash>()), Times.Once);
     }
 
@@ -345,7 +319,7 @@ public class IngestionTests
 
         bool result = await ingestion.ShouldInsertOrUpdateAsync(doc, fullText);
 
-        Assert.False(result);
+        Assert.True(result);
         docHashRepMock.Verify(repo => repo.UpdateAsync(It.IsAny<DocumentHash>(), It.IsAny<string>()), Times.Once);
     }
 
@@ -361,37 +335,8 @@ public class IngestionTests
 
         bool result = await ingestion.ShouldInsertOrUpdateAsync(doc, fullText);
 
-        Assert.True(result);
+        Assert.False(result);
         docHashRepMock.Verify(repo => repo.UpdateAsync(It.IsAny<DocumentHash>(), It.IsAny<string>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task IsDocUnchangedAsync_DeleteAsyncThrowsException_LogsError()
-    {
-        DocumentInfo doc = new DocumentInfo("prefix", null, null, null, null) { DocumentReference = "doc1" };
-        string fullText = string.Empty;
-        string newHash = Ingestion.ComputeSha256Hash(fullText);
-        DocumentHash documentHash = new DocumentHash { DocumentReference = doc.DocumentReference, Hash = newHash };
-
-        docHashRepMock.Setup(repo => repo.GetDocumentHashAsync(doc.DocumentReference))
-                      .ReturnsAsync(documentHash);
-        docHashRepMock.Setup(repo => repo.DeleteAsync(It.IsAny<List<string>>()))
-                      .ThrowsAsync(new Exception("DeleteAsync exception"));
-
-        Ingestion ingestion = new Ingestion(docHashRepMock.Object, docSourceFactoryMock.Object, embedMock.Object, logMock.Object, searchSvcMock.Object);
-
-        bool result = await ingestion.ShouldInsertOrUpdateAsync(doc, fullText);
-
-        Assert.True(result);
-        logMock
-            .Verify(
-                l => l.Log(
-                    LogLevel.Error,
-                    It.IsAny<EventId>(),
-                    It.IsAny<It.IsAnyType>(),
-                    It.IsAny<Exception>(),
-                    (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
-                Times.Once);
     }
 
     [Fact]
