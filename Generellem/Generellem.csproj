@@ -67,7 +67,7 @@ Changes since last beta include minor refactorings and a bug fix to make sure th
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
-		<PackageReference Include="Microsoft.Graph" Version="5.69.0" />
+		<PackageReference Include="Microsoft.Graph" Version="5.68.0" />
 		<PackageReference Include="NPOI.HWPFCore" Version="2.3.0.1" />
 		<PackageReference Include="PdfPig" Version="0.1.9" />
 		<PackageReference Include="Polly.Core" Version="8.5.1" />
