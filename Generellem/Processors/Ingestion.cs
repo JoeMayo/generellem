@@ -6,12 +6,8 @@ using Generellem.Services;
 
 using Microsoft.Extensions.Logging;
 
-using Polly;
-using Polly.Retry;
-
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 
 namespace Generellem.Processors;
 
@@ -33,7 +29,7 @@ public class Ingestion(
     /// </summary>
     /// <param name="progress">Lets the caller receive progress updates.</param>
     /// <param name="cancelToken"><see cref="CancellationToken"/></param>
-    public virtual async Task IngestDocumentsAsync(IProgress<IngestionProgress> progress,CancellationToken cancelToken)
+    public virtual async Task IngestDocumentsAsync(IProgress<IngestionProgress> progress, CancellationToken cancelToken)
     {
         int count = 0;
 
@@ -49,47 +45,72 @@ public class Ingestion(
 
             List<string> documentReferences = [];
 
-            await foreach (DocumentInfo doc in docSource.GetDocumentsAsync(cancelToken))
+            try
             {
-                ArgumentNullException.ThrowIfNull(doc);
-                ArgumentNullException.ThrowIfNull(doc.DocStream);
-                ArgumentNullException.ThrowIfNull(doc.DocType);
-                ArgumentException.ThrowIfNullOrEmpty(doc.DocPath);
-                ArgumentException.ThrowIfNullOrEmpty(doc.DocumentReference);
-
-                if (doc.DocType.GetType() == typeof(Unknown))
-                    continue;
-
-                string fullText;
-                try
+                await foreach (DocumentInfo doc in docSource.GetDocumentsAsync(cancelToken))
                 {
-                    fullText = await doc.DocType.GetTextAsync(doc.DocStream, doc.DocPath);
+                    ArgumentNullException.ThrowIfNull(doc);
+                    ArgumentNullException.ThrowIfNull(doc.DocStream);
+                    ArgumentNullException.ThrowIfNull(doc.DocType);
+                    ArgumentException.ThrowIfNullOrEmpty(doc.DocPath);
+                    ArgumentException.ThrowIfNullOrEmpty(doc.DocumentReference);
 
-                    // regardless of whether the file has contents or not, we need to insert it into the DB to track it
-                    // setting it to "<empty>" avoids errors when uploading to vector DB
-                    if (string.IsNullOrWhiteSpace(fullText))
-                        fullText = EmptyText;
+                    if (doc.DocType.GetType() == typeof(Unknown))
+                        continue;
+
+                    string fullText;
+                    try
+                    {
+                        fullText = await doc.DocType.GetTextAsync(doc.DocStream, doc.DocPath);
+
+                        // regardless of whether the file has contents or not, we need to insert it into the DB to track it
+                        // setting it to "<empty>" avoids errors when uploading to vector DB
+                        if (string.IsNullOrWhiteSpace(fullText))
+                            fullText = EmptyText;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(GenerellemLogEvents.DocumentError, ex, "Unable to extract text from stream: {FilePath}", doc.DocPath);
+                        continue;
+                    }
+
+                    documentReferences.Add(doc.DocumentReference);
+
+                    if (!await ShouldInsertOrUpdateAsync(doc, fullText))
+                        continue;
+
+                    progress.Report(new($"Ingesting {doc.DocumentReference}", ++count));
+
+                    try
+                    {
+                        await InsertOrUpdateDocumentAsync(doc, fullText, docSource, progress, cancelToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(GenerellemLogEvents.DocumentError, ex, "Unable to insert document: {DocumentReference}", doc.DocumentReference);
+                        continue;
+                    }
+
+                    if (cancelToken.IsCancellationRequested)
+                        break;
                 }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(GenerellemLogEvents.DocumentError, ex, "Unable to extract text from stream: {FilePath}", doc.DocPath);
-                    continue;
-                }
 
-                documentReferences.Add(doc.DocumentReference);
-
-                if (!await ShouldInsertOrUpdateAsync(doc, fullText))
-                    continue;
-
-                progress.Report(new($"Ingesting {doc.DocumentReference}", ++count));
-
-                await InsertOrUpdateDocumentAsync(doc, fullText, docSource, progress, cancelToken);
-
-                if (cancelToken.IsCancellationRequested)
-                    break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(GenerellemLogEvents.DocumentError, ex, "Unable to process document source: {DocumentSource}", docSource.Description);
+                continue;
             }
 
-            await RemoveDeletedDocumentsAsync(docSource.Reference, documentReferences, docSource, cancelToken);
+            try
+            {
+                await RemoveDeletedDocumentsAsync(docSource.Reference, documentReferences, docSource, cancelToken);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(GenerellemLogEvents.DocumentError, ex, "Unable to remove deleted documents from {DocumentSource}", docSource.Description);
+                continue;
+            }
 
             progress.Report(new($"Completed the {docSource.Description} Document Source"));
             progress.Report(new($""));
