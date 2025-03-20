@@ -122,7 +122,7 @@ public class Website : IDocumentSource
 
         List<string> links =
             (from node in nodes
-             let href = node.GetAttributeValue("href", null)
+             let href = node.GetAttributeValue("href", string.Empty)
              where href != null && href.StartsWith(baseUrl)
              select href)
             .ToList();
