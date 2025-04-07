@@ -516,4 +516,9 @@ public class QdrantService(IDynamicConfiguration config, ILogger<QdrantService> 
                 rpcEx);
         }
     }
+
+    public Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
 }
