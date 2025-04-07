@@ -283,4 +283,9 @@ public class AzureSearchService(IDynamicConfiguration config, ILogger<AzureSearc
     {
         throw new NotImplementedException();
     }
+
+    public Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
 }
