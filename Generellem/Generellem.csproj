@@ -56,26 +56,26 @@ Changes since last beta include minor refactorings and a bug fix to make sure th
 
 	<ItemGroup>
 		<PackageReference Include="Azure.AI.OpenAI" Version="2.1.0" />
-		<PackageReference Include="Azure.Search.Documents" Version="11.6.0" />
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.24.0" />
+		<PackageReference Include="Azure.Search.Documents" Version="11.6.1" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.25.0" />
 		<PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
-		<PackageReference Include="HtmlAgilityPack" Version="1.12.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.3">
+		<PackageReference Include="HtmlAgilityPack" Version="1.12.2" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.3" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.3" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.3" />
-		<PackageReference Include="Microsoft.Graph" Version="5.74.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.7" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.7" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
+		<PackageReference Include="Microsoft.Graph" Version="5.88.0" />
 		<PackageReference Include="NPOI.HWPFCore" Version="2.3.0.1" />
-		<PackageReference Include="PdfPig" Version="0.1.10" />
-		<PackageReference Include="Polly.Core" Version="8.5.2" />
-		<PackageReference Include="Qdrant.Client" Version="1.13.0" />
+		<PackageReference Include="PdfPig" Version="0.1.11" />
+		<PackageReference Include="Polly.Core" Version="8.6.2" />
+		<PackageReference Include="Qdrant.Client" Version="1.15.0" />
 		<PackageReference Include="SharpZipLib" Version="1.4.2" />
-		<PackageReference Include="SkiaSharp" Version="3.116.1" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.3" />
-		<PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.3" />
+		<PackageReference Include="SkiaSharp" Version="3.119.0" />
+		<PackageReference Include="System.Drawing.Common" Version="9.0.7" />
+		<PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.7" />
 	</ItemGroup>
 
 	<ItemGroup>
