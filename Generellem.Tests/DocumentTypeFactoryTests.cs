@@ -10,8 +10,8 @@ public class DocumentTypeFactoryTests
     [InlineData("document.asc", typeof(AsciiDoc))]
     [InlineData("document.asciidoc", typeof(AsciiDoc))]
     [InlineData("document.csv", typeof(Csv))]
+    [InlineData("document.doc", typeof(Word))]
     [InlineData("document.docx", typeof(Word))]
-    //[InlineData("document.doc", typeof(Word))]
     [InlineData("document.html", typeof(Html))]
     [InlineData("document.md", typeof(Markdown))]
     [InlineData("document.pdf", typeof(Pdf))]
@@ -27,5 +27,14 @@ public class DocumentTypeFactoryTests
         var documentType = DocumentTypeFactory.Create(fileName);
 
         Assert.IsType(expectedType, documentType);
+    }
+
+    [Fact]
+    public void GetSupportedDocumentTypes_IncludesDocAndDocx()
+    {
+        IEnumerable<string> supportedTypes = DocumentTypeFactory.GetSupportedDocumentTypes();
+
+        Assert.Contains(".doc", supportedTypes);
+        Assert.Contains(".docx", supportedTypes);
     }
 }

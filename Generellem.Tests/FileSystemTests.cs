@@ -17,14 +17,35 @@ public class FileSystemTests
     [Fact]
     public async Task GetFiles_ReturnsFiles()
     {
-        PathSpec fileSpec = new() { Path = "." };
-        pathProviderMock
-            .Setup(fs => fs.GetPathsAsync(It.IsAny<string>()))
-            .ReturnsAsync(new[] { fileSpec });
+        string tempDir = Path.Combine(Path.GetTempPath(), $"generellem-fs-test-{Guid.NewGuid()}");
+        Directory.CreateDirectory(tempDir);
 
-        var fileSystem = new FileSystem(pathProviderFactoryMock.Object);
+        try
+        {
+            string testFile = Path.Combine(tempDir, "sample.txt");
+            await File.WriteAllTextAsync(testFile, "test content");
 
-        await foreach (DocumentInfo docInfo in fileSystem.GetDocumentsAsync(CancellationToken.None))
-            Assert.NotEmpty(docInfo.DocumentReference);
+            PathSpec fileSpec = new() { Path = tempDir };
+            pathProviderMock
+                .Setup(fs => fs.GetPathsAsync(It.IsAny<string>()))
+                .ReturnsAsync(new[] { fileSpec });
+
+            var fileSystem = new FileSystem(pathProviderFactoryMock.Object);
+
+            List<DocumentInfo> documents = [];
+
+            await foreach (DocumentInfo docInfo in fileSystem.GetDocumentsAsync(CancellationToken.None))
+            {
+                Assert.NotEmpty(docInfo.DocumentReference);
+                documents.Add(docInfo);
+                docInfo.DocStream?.Dispose();
+            }
+
+            Assert.Single(documents);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
     }
 }

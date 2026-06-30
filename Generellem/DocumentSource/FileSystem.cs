@@ -60,7 +60,7 @@ public class FileSystem : IDocumentSource
                     string fileName = Path.GetFileName(filePath);
 
                     IDocumentType docType = DocumentTypeFactory.Create(fileName);
-                    Stream fileStream = File.OpenRead(filePath);
+                    Stream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
                     yield return new DocumentInfo(Reference, fileStream, docType, filePath, specDescription);
 
