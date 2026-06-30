@@ -1,6 +1,6 @@
 ## What is Generellem?
 
->Note: Please visit [Architecture](https://github.com/generellem/generellem/wiki/Architecture) in the wiki for the official version of the architecture. I put this here for testing a long document during the ingestion process.
+>Note: Please visit [Architecture](https://github.com/JoeMayo/generellem/wiki/Architecture) in the wiki for the official version of the architecture. I put this here for testing a long document during the ingestion process.
 
 Generellem is a service that lets anyone use their own data with a Large Language Model (LLM). It comes as 2 products:
 
@@ -51,7 +51,7 @@ Now that you have an idea of the system characteristics, let's take an overview 
 
 Generellem is a library that you can use in your own applications. It allows you to specify your own documents that serve as source data to an LLM. The following diagram is an overview, from a birds-eye view, on how the major components fit together to make Generellem work:
 
-![Overview](https://github.com/generellem/generellem/assets/6180567/6d9dacf1-2ae6-441f-9d37-04a61b7c41fd)
+![Overview](https://github.com/JoeMayo/generellem/assets/6180567/6d9dacf1-2ae6-441f-9d37-04a61b7c41fd)
 
 At the bottom of the diagram is your application. It references the Generellem library. For access to local file systems or internal network resources, Generellem will have to run on a server that has access to those files and resources. If the documentation is accessible via the cloud, Generellem can run via a cloud service. 
 
@@ -71,7 +71,7 @@ The first concept from the component view is that there are two separate groups 
 
 There are two primary types of components for working with documents: Document Sources and Document Types. A Document Source is a place where the document comes from, such as a file system or web site. Document Types are documents that have a specific format or purpose, such as an Excel spreadsheet or a PDF file. The image below shows how components for Document Sources and Document Types are modeled in Generellem.
 
-![DocumentComponents](https://github.com/generellem/generellem/assets/6180567/d34722e0-890e-4f68-9cdb-ca598ab59e1a)
+![DocumentComponents](https://github.com/JoeMayo/generellem/assets/6180567/d34722e0-890e-4f68-9cdb-ca598ab59e1a)
 
 In the diagram, `IDocumentSource` represents anything that is a Document Source. It's `GetDocumentsAsync` method returns a collection of `DocumentInfo` that has metadata and a `Stream` for reading the document. While the initial implementation of a document is assumed to have a textual representation, we want to leave open the possibility of other document types in the future, like audio, video, or any other binary representation of information.
 
@@ -83,7 +83,7 @@ In addition to documents, Generellem has components that help work with user que
 
 At the core of handling user questions is a request and a response, respectively sending and receiving text data. Because we have a requirement to support multiple LLMs, we need to abstract the handling of the request and response, which differs between LLMs. The following figure shows how we do it:
 
-![UserRequestResponse](https://github.com/generellem/generellem/assets/6180567/66fb289a-acbc-4e4e-b17c-a4161e7c2850)
+![UserRequestResponse](https://github.com/JoeMayo/generellem/assets/6180567/66fb289a-acbc-4e4e-b17c-a4161e7c2850)
 
 The `IChatRequest` and `IChatResponse` represent the request and response in the simplest way possible. They just have a `Text` property of type `string`. As of this writing, Generellem supports Azure Open AI, as you can see via the `AzureOpenAIChatRequest`, implementing `IChatRequest`, and `AzureOpenAIChatResponse`, implenting `IChatResponse`. In addition to the required `Text` property, these classes have members specific to Azure Open AI: `AzureOpenAIChatRequst` has a `ChatCompletionsOptions` property for special configuration options that Azure Open AI needs and `AzureOpenAIResponse` has a `ChatCompletionsResponse` for the response options from Azure Open AI.
 
@@ -104,7 +104,7 @@ Earlier, you learned about Document Sources and Documents. To support the abilit
 
 The following diagram shows how Generellem does this:
 
-![IngestionProcess](https://github.com/generellem/generellem/assets/6180567/63465687-25c8-495b-91b0-6d714f3a8c99)
+![IngestionProcess](https://github.com/JoeMayo/generellem/assets/6180567/63465687-25c8-495b-91b0-6d714f3a8c99)
 
 Ideally, the `DocumentProcessor` runs in its own background process on a timer. That way, it can wake up periodically to see if there are any new, modified, or deleted documents to handle. For simplicity, this diagram doesn't show the loops on the Document Source and Documents. It also only shows the new document process, though Generellem does handle modified and deleted documents.
 
@@ -132,7 +132,7 @@ So far, we've defined components and described the ingestion process, where docu
 
 The following diagram shows how this process works:
 
-![QueryProcess](https://github.com/generellem/generellem/assets/6180567/b2ea7646-dff0-486b-99f7-76265789d7e8)
+![QueryProcess](https://github.com/JoeMayo/generellem/assets/6180567/b2ea7646-dff0-486b-99f7-76265789d7e8)
 
 The `AzureOpenAIOrchestrator` manages the RAG process that deals with querying the LLM. It has a `chatHistory`, which is a list of previous queries and their answers.
 
@@ -148,7 +148,7 @@ The last thing to do is to take the new response and update `chatHistory`, setti
 
 ## Deployment
 
-Generellem will be a .NET 8 DLL and you'll be able to get it via NuGet, GitHub release page, or source code. Right now, it's only available as source code, which will change after a few more preparatory steps. Follow the guidance in [Adding Generellem to Your App](https://github.com/generellem/generellem/wiki/Adding-Generellem-to-Your-App) for ideas on how to incorporate it into your app.
+Generellem will be a .NET 8 DLL and you'll be able to get it via NuGet, GitHub release page, or source code. Right now, it's only available as source code, which will change after a few more preparatory steps. Follow the guidance in [Adding Generellem to Your App](https://github.com/JoeMayo/generellem/wiki/Adding-Generellem-to-Your-App) for ideas on how to incorporate it into your app.
 
 ## Governance 
 
@@ -156,11 +156,11 @@ I haven't decided what will go in this section exactly. I'm thinking along the l
 
 This article focuses on the ConsoleDemo project in the cloneable source code. Specifically, refer to the following files for the full code listings:
 
-[Program.cs](https://github.com/generellem/generellem/blob/main/GenerellemConsole/Program.cs)
+[Program.cs](https://github.com/JoeMayo/generellem/blob/main/GenerellemConsole/Program.cs)
 
 and
 
-[GenerellemHostedService.cs](https://github.com/generellem/generellem/blob/main/GenerellemConsole/GenerellemHostedService.cs)
+[GenerellemHostedService.cs](https://github.com/JoeMayo/generellem/blob/main/GenerellemConsole/GenerellemHostedService.cs)
 
 ## Program.cs is `Main`
 
@@ -170,7 +170,7 @@ The applications starts in _Program.cs_. Here are the primary tasks we'll cover:
 * Setting up the Inversion of Control (IoC) container
 * Configuring the SQLite DB
 
-> Follow the directions in [Getting Started](https://github.com/generellem/generellem/wiki/Getting-Started) to understand how to run _ConsoleDemo_.
+> Follow the directions in [Getting Started](https://github.com/JoeMayo/generellem/wiki/Getting-Started) to understand how to run _ConsoleDemo_.
 
 ### Initializing the configuration
 
@@ -207,7 +207,7 @@ In addition to the `Configuration` property, we use the `Services` property of `
 
 ### Setting up the IoC Container
 
-The `HostApplicationBuilder.Services` property exposes functionality to support IoC, the ability to specify dependencies to the code, rather than having the code explicitly instantiate types. The benefit of this is that the code is loosely coupled, easier to maintain, and makes testing via mocking simpler. The loosely coupled concept is a particularly important feature because it enables Generellem's [Plug-In Architecture](https://github.com/generellem/generellem/wiki/Architecture). I'll expand on that briefly, after we see the code:
+The `HostApplicationBuilder.Services` property exposes functionality to support IoC, the ability to specify dependencies to the code, rather than having the code explicitly instantiate types. The benefit of this is that the code is loosely coupled, easier to maintain, and makes testing via mocking simpler. The loosely coupled concept is a particularly important feature because it enables Generellem's [Plug-In Architecture](https://github.com/JoeMayo/generellem/wiki/Architecture). I'll expand on that briefly, after we see the code:
 
 ```C#
 void ConfigureServices(IServiceCollection services)
@@ -247,7 +247,7 @@ You can use this code as-is and get value out of it right away. However, what th
 * Instead of Cognitive Search, you can switch to another Vector DB
 * Instead of Azure OpenAI, you can use Google Bart or Meta Llama
 
-In fact, one of the goals of Generellem is to be a place to expand on all of these choices. We'll be adding more plug-ins in the future and welcome contributions from you. See the [Contributing](https://github.com/generellem/generellem/blob/main/CONTRIBUTING.md) docs for more information.
+In fact, one of the goals of Generellem is to be a place to expand on all of these choices. We'll be adding more plug-ins in the future and welcome contributions from you. See the [Contributing](https://github.com/JoeMayo/generellem/blob/main/CONTRIBUTING.md) docs for more information.
 
 Another part of the initialization process is a SQLite DB, which we'll discuss next.
 
@@ -265,7 +265,7 @@ void ConfigureDB()
 }
 ```
 
-When instantiating `GenerellemContext` we want to dispose, with the `using` statement, the instance so we don't unnecessarily hold onto a DB connection. As you might guess, the `Database` property gives you the ability to manipulate the DB. `OpenConnection` is a little bit subtle because it also creates the DB if it doesn't already exist. This happens because the default connection string `Mode` parameter is `ReadWriteCreate`. You can verify this by peeking at the code in [`GenerellemContext`](https://github.com/generellem/generellem/blob/main/Generellem/Repository/GenerellemContext.cs).
+When instantiating `GenerellemContext` we want to dispose, with the `using` statement, the instance so we don't unnecessarily hold onto a DB connection. As you might guess, the `Database` property gives you the ability to manipulate the DB. `OpenConnection` is a little bit subtle because it also creates the DB if it doesn't already exist. This happens because the default connection string `Mode` parameter is `ReadWriteCreate`. You can verify this by peeking at the code in [`GenerellemContext`](https://github.com/JoeMayo/generellem/blob/main/Generellem/Repository/GenerellemContext.cs).
 
 Looking at the _Generellem_ project code, you'll also see an EF Core _Migrations_ folder. The call to `Migrate` uses the code in that folder.
 
@@ -310,18 +310,18 @@ Website:
 ```JSON
 [
   {
-    "url": "https://github.com/generellem/generellem/wiki"
+    "url": "https://github.com/JoeMayo/generellem/wiki"
   }
 ]
 ```
 
 This is a JSON array of objects with `url` properties - one `url` property per object. This example scans the Generellem Wiki on GitHub. You specify the top-level URL and Generellem crawls the site recursively, treating each page as a separate document.
 
-> Note: The current Website Document Source makes the assumption that the Website doesn't require login. We have an [issue](https://github.com/generellem/generellem/issues/114) to design extensibility points to address this. This will require some research and we appreciate feedback on what a good approach would be.
+> Note: The current Website Document Source makes the assumption that the Website doesn't require login. We have an [issue](https://github.com/JoeMayo/generellem/issues/114) to design extensibility points to address this. This will require some research and we appreciate feedback on what a good approach would be.
 
-When the app runs, you'll see documents being ingested. You can verify this by visiting the Azure Cognitive Search resource that you configured during the [Getting Started](https://github.com/generellem/generellem/wiki/Getting-Started) process and visiting the index named `generellem-index`. Here's what it might look like for you:
+When the app runs, you'll see documents being ingested. You can verify this by visiting the Azure Cognitive Search resource that you configured during the [Getting Started](https://github.com/JoeMayo/generellem/wiki/Getting-Started) process and visiting the index named `generellem-index`. Here's what it might look like for you:
 
-![ConsoleDemoStartup](https://github.com/generellem/generellem/assets/6180567/9296c561-3404-4ac2-b346-a78f1359b3ea)
+![ConsoleDemoStartup](https://github.com/JoeMayo/generellem/assets/6180567/9296c561-3404-4ac2-b346-a78f1359b3ea)
 
 If we've already ingested a document, we don't ingest it again unless it has changed. That's what the SQLite DB `DocumentHashes` table is for - reducing the extra network overhead to optimize the ingestion process. Another task that `DocumentHashes` helps with is identifying previously ingested documents that have been deleted since the previous ingestion and deleting them from Azure Cognitive Search so that your index doesn't collect stale data.
 
@@ -368,7 +368,7 @@ The `chatHistory` queue is important here because Generellem uses that to create
 * Less context for potentially lower quality responses vs. more context for higher quality answers.
 * Lower quality for unrelated context vs. high quality for relevant context.
 
->Note: Generellem currently manages this queue manually, capping it at the 5 most recent queries. We have an [issue](https://github.com/generellem/generellem/issues/70) open to refactor this. We will probably need some type of extensibility point to give you maximum flexibility in how to manage history because the strategy is likely to not be the same for different users. Your thoughts here are welcome.
+>Note: Generellem currently manages this queue manually, capping it at the 5 most recent queries. We have an [issue](https://github.com/JoeMayo/generellem/issues/70) open to refactor this. We will probably need some type of extensibility point to give you maximum flexibility in how to manage history because the strategy is likely to not be the same for different users. Your thoughts here are welcome.
 
 Finally, we prompt the user, send the request via `AskAsync`, and print the response. Inside of `AskAsync` is where the magic happens. We're using a technique called Retrieval Augmented Generation (RAG). In a nutshell, the RAG process uses the ingested documents, builds a sophisticated prompt with context and documentation, and sends that to the Large Language Model (LLM). Besides history, the mechanics of this is something you don't need to dive into to get started. However, because of extensibility, you could write your own `IRag` plugin to manage the process too. As we go along, we'll add more plugins and continuously tweak the RAG processes to optimize Generellem quality.
 
@@ -376,7 +376,7 @@ That's it, just call `ProcessFilesAsync` to ingest documents and `AskAsync` to g
 
 ## Summary
 
-This article explains how to integrate Generellem into your application. Remember to follow the guidance in [Getting Started](https://github.com/generellem/generellem/wiki/Getting-Started) to set up your environment and resources.
+This article explains how to integrate Generellem into your application. Remember to follow the guidance in [Getting Started](https://github.com/JoeMayo/generellem/wiki/Getting-Started) to set up your environment and resources.
 
 The initialization process relies on the .NET `HostApplicationBuilder`, which we used for configuration and IoC. You have the ability to plug-in your own configuration and Generellem uses the `IConfiguration` interface to acces all configuration artifacts. Generellem also uses IoC, rather than direct type instantiation, to work with objects. This gives you the ability to replace components as you like, makes the application more maintainable, and supports the type of unit testing we're doing with mocking libraries.
 
@@ -394,7 +394,7 @@ There are many ways to contribute such as code documentation, and helping others
 
 ### New Features
 
-There are two way to see existing new features: [The Generellem Project](https://github.com/users/generellem/projects/2) or [Issues](https://github.com/generellem/generellem/issues). By design, we turn all new project cards into Issues so they show up in the Issues too, where it might be easier for some people to read details. Of course, reading via the Project gives a good idea of each issue's status.
+There are two way to see existing new features: [The Generellem Project](https://github.com/users/generellem/projects/2) or [Issues](https://github.com/JoeMayo/generellem/issues). By design, we turn all new project cards into Issues so they show up in the Issues too, where it might be easier for some people to read details. Of course, reading via the Project gives a good idea of each issue's status.
 
 If there's an issue that you would like to work on, reach out to Joe so he can assign that to you. If you don't see a feature that you would like to have, either create a new one in Issues or visit the Discussions section if you want to discuss it with other community members first.
 

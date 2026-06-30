@@ -8,7 +8,7 @@ There are many ways to contribute such as code documentation, and helping others
 
 ### New Features
 
-There are two way to see existing new features: [The Generellem Project](https://github.com/users/generellem/projects/2) or [Issues](https://github.com/generellem/generellem/issues). By design, we turn all new project cards into Issues so they show up in the Issues too, where it might be easier for some people to read details. Of course, reading via the Project gives a good idea of each issue's status.
+There are two way to see existing new features: [The Generellem Project](https://github.com/users/generellem/projects/2) or [Issues](https://github.com/JoeMayo/generellem/issues). By design, we turn all new project cards into Issues so they show up in the Issues too, where it might be easier for some people to read details. Of course, reading via the Project gives a good idea of each issue's status.
 
 If there's an issue that you would like to work on, reach out to Joe so he can assign that to you. If you don't see a feature that you would like to have, either create a new one in Issues or visit the Discussions section if you want to discuss it with other community members first.
 

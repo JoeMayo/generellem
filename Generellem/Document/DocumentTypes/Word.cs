@@ -10,7 +10,7 @@ public class Word : IDocumentType
 {
     public virtual bool CanProcess => true;
 
-    public virtual List<string> SupportedExtensions => new() { ".docx"/*, ".doc"*/ };
+    public virtual List<string> SupportedExtensions => new() { ".doc", ".docx" };
 
     public virtual async Task<string> GetTextAsync(Stream documentStream, string filePath)
     {

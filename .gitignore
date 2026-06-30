@@ -371,3 +371,6 @@ generellem.db
 # DocFX-related files
 /api/
 /_site/
+
+# macOS
+.DS_Store

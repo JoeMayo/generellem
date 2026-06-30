@@ -23,7 +23,7 @@ public class DocumentTypeFactory
         {
             ".adoc" or ".asc" or ".asciidoc" => new AsciiDoc(),
             ".csv" => new Csv(),
-            ".docx" /*or ".doc"*/ => new Word(),
+            ".doc" or ".docx" => new Word(),
             ".html" => new Html(),
             ".md" => new Markdown(),
             ".pdf" => new Pdf(),

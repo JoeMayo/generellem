@@ -10,10 +10,10 @@
 		<Company>Generellem, Inc.</Company>
 		<Description>Open-Source RAG framework for C# and other .NET developers.</Description>
 		<Copyright>Copyright 2024 Generellem, Inc.</Copyright>
-		<PackageProjectUrl>https://github.com/JoeAtGenerellem/generellem</PackageProjectUrl>
+		<PackageProjectUrl>https://github.com/JoeMayo/generellem</PackageProjectUrl>
 		<PackageIcon>dp_social_G_400x400.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<RepositoryUrl>https://github.com/JoeAtGenerellem/generellem</RepositoryUrl>
+		<RepositoryUrl>https://github.com/JoeMayo/generellem</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>ai, generative ai, generellem, llm</PackageTags>
 		<PackageReleaseNotes>Full Release

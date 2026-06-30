@@ -4,6 +4,8 @@ using Azure.AI.OpenAI;
 using Generellem.Embedding;
 using Generellem.Llm;
 using Generellem.Llm.AzureOpenAI;
+using Generellem.Processors;
+using Generellem.Rag;
 using Generellem.Services;
 using Generellem.Tests;
 
@@ -189,5 +191,32 @@ public class AzureOpenAIRagTests
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
                 Times.Once);
+    }
+
+    [Fact]
+    public async Task BuildRequestAsync_IncludesPriorChatHistoryInIntentSummarization()
+    {
+        Queue<ChatMessage> chatHistory = new();
+        ChatHistoryRecorder.RecordTurn(chatHistory, "What is Generellem?", "A RAG framework for .NET.");
+        AzureOpenAIChatRequest? capturedRequest = null;
+
+        llmMock
+            .Setup(llm => llm.PromptAsync<AzureOpenAIChatResponse>(It.IsAny<IChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<IChatRequest, CancellationToken>((request, _) => capturedRequest = request as AzureOpenAIChatRequest)
+            .ReturnsAsync(new AzureOpenAIChatResponse());
+
+        configMock
+            .Setup(config => config[GKeys.AzOpenAIDeploymentName])
+            .Returns("generellem");
+
+        await azureOpenAIRag.BuildRequestAsync<AzureOpenAIChatRequest>(
+            "Tell me more about that.", chatHistory, CancellationToken.None);
+
+        SystemChatMessage intentMessage = Assert.IsType<SystemChatMessage>(capturedRequest!.Messages![0]);
+        string intentPrompt = intentMessage.Content[0].Text;
+
+        Assert.Contains("User: What is Generellem?", intentPrompt);
+        Assert.Contains("Assistant: A RAG framework for .NET.", intentPrompt);
+        Assert.Contains("User's query: Tell me more about that.", intentPrompt);
     }
 }

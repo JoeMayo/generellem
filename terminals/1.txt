@@ -1,0 +1,56 @@
+---
+pid: 928
+cwd: "C:\Projects\generellem"
+command: "dotnet test \"C:\\Projects\\generellem\\Generellem.sln\" --verbosity minimal; for ($i = 1; $i -le 10; $i++) { dotnet test \"C:\\Projects\\generellem\\Generellem.sln\" --no-build --verbosity quiet; if ($LASTEXITCODE -ne 0) { Write-Host \"Failed on run $i\"; exit $LASTEXITCODE } }; Write-Host \"All 10 runs passed\""
+started_at: 2026-06-30T03:01:18.034Z
+running_for_ms: 1885009  
+---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Generellem -> C:\Projects\generellem\Generellem\bin\Debug\net8.0\Generellem.dll
+  Generellem.Tests -> C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 303 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 284 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 308 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 297 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 302 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 300 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 287 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 305 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 324 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 316 ms - Generellem.Tests.dll (net8.0)
+Test run for C:\Projects\generellem\Generellem.Tests\bin\Debug\net8.0\Generellem.Tests.dll (.NETCoreApp,Version=v8.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   104, Skipped:     0, Total:   104, Duration: 301 ms - Generellem.Tests.dll (net8.0)
+All 10 runs passed
