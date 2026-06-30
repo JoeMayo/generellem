@@ -26,7 +26,7 @@ flowchart LR
 | Step | Task | Done when |
 |------|------|-----------|
 | **1.1** | Fix chat history in `GenerellemHostedService` | ✅ Done — `ChatHistoryRecorder` records turns; both demos updated; RAG labels assistant messages correctly |
-| **1.2** | Add CI workflow (`build` + `test` on PR and push to `main`) | GitHub Actions runs `dotnet build` and `dotnet test`; fails on broken builds |
+| **1.2** | Add CI workflow (`build` + `test` on PR and push to `main`) | ✅ Done — `.github/workflows/ci.yml` runs Release build + 102 tests on PRs and pushes to `main` |
 | **1.3** | Repo hygiene | `.DS_Store` removed and gitignored; README typos and org URL inconsistencies fixed |
 | **1.4** | Resolve `.doc` inconsistency | `DocumentTypeFactory` and `Word.SupportedExtensions` agree; ingestion of `.doc` works or is explicitly unsupported with docs updated |
 
@@ -136,7 +136,7 @@ flowchart LR
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 1 — Quick wins | In progress | 1.1 complete; next: 1.2 CI |
+| 1 — Quick wins | In progress | 1.1–1.2 complete; next: 1.3 repo hygiene |
 | 2 — DX & config | Not started | |
 | 3 — Search parity | Not started | |
 | 4 — RAG quality | Not started | |
