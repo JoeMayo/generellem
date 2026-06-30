@@ -100,6 +100,8 @@ internal class GenerellemHostedService(
 
             string response = await generellemQuery.AskAsync(userInput, chatHistory, cancelToken);
 
+            ChatHistoryRecorder.RecordTurn(chatHistory, userInput, response);
+
             Console.WriteLine($"\n{response}\n");
 
             if (cancelToken.IsCancellationRequested)

@@ -119,8 +119,14 @@ public class GenerellemDefaultRag(
 
         foreach (ChatMessage chatMessage in chatHistory)
         {
-            string role = chatMessage is UserChatMessage ? "User" : "System";
-            sb.AppendLine($"{role}: {chatMessage.Content}\n");
+            string role = chatMessage switch
+            {
+                UserChatMessage => "User",
+                AssistantChatMessage => "Assistant",
+                SystemChatMessage => "System",
+                _ => "System"
+            };
+            sb.AppendLine($"{role}: {AzureOpenAIChatRequest.GetRequestContent(chatMessage)}\n");
         }
 
         List<ChatMessage> messages =

@@ -37,9 +37,12 @@ public class AzureOpenAIChatRequest : IChatRequest
     public static string GetRequestContent(ChatMessage chatMessage) =>
         chatMessage switch
         {
-            AssistantChatMessage assistantMessage => assistantMessage.Content?.ToString() ?? string.Empty,
-            SystemChatMessage systemMessage => systemMessage.Content?.ToString() ?? string.Empty,
-            UserChatMessage userMessage => userMessage.Content?.ToString() ?? string.Empty,
+            AssistantChatMessage assistantMessage when assistantMessage.Content.Count > 0 =>
+                assistantMessage.Content[0].Text ?? string.Empty,
+            SystemChatMessage systemMessage when systemMessage.Content.Count > 0 =>
+                systemMessage.Content[0].Text ?? string.Empty,
+            UserChatMessage userMessage when userMessage.Content.Count > 0 =>
+                userMessage.Content[0].Text ?? string.Empty,
             _ => string.Empty
         };
 
