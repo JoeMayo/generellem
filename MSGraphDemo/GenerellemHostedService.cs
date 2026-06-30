@@ -135,7 +135,7 @@ demonstrate how Generellem works.
 Remember to follow instructions on the Getting Started page to configure
 services properly:
 
-https://github.com/generellem/generellem/wiki/Getting-Started
+https://github.com/JoeMayo/generellem/wiki/Getting-Started
 
 Let's get started!
 

@@ -27,7 +27,7 @@ flowchart LR
 |------|------|-----------|
 | **1.1** | Fix chat history in `GenerellemHostedService` | ✅ Done — `ChatHistoryRecorder` records turns; both demos updated; RAG labels assistant messages correctly |
 | **1.2** | Add CI workflow (`build` + `test` on PR and push to `main`) | ✅ Done — `.github/workflows/ci.yml` runs Release build + 102 tests on PRs and pushes to `main` |
-| **1.3** | Repo hygiene | `.DS_Store` removed and gitignored; README typos and org URL inconsistencies fixed |
+| **1.3** | Repo hygiene | ✅ Done — `.DS_Store` gitignored and removed from index; README typos and URLs standardized to `JoeMayo/generellem` |
 | **1.4** | Resolve `.doc` inconsistency | `DocumentTypeFactory` and `Word.SupportedExtensions` agree; ingestion of `.doc` works or is explicitly unsupported with docs updated |
 
 **Estimated effort:** ~1–2 sessions  
@@ -136,7 +136,7 @@ flowchart LR
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| 1 — Quick wins | In progress | 1.1–1.2 complete; next: 1.3 repo hygiene |
+| 1 — Quick wins | In progress | 1.1–1.3 complete; next: 1.4 `.doc` inconsistency |
 | 2 — DX & config | Not started | |
 | 3 — Search parity | Not started | |
 | 4 — RAG quality | Not started | |
