@@ -1,4 +1,6 @@
-﻿using DocumentFormat.OpenXml.Packaging;
+﻿using System.Text;
+
+using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 
 using NPOI.HWPF;
@@ -8,6 +10,13 @@ namespace Generellem.Document.DocumentTypes;
 
 public class Word : IDocumentType
 {
+    static Word()
+    {
+        // NPOI HWPF (.doc) needs Windows-1252 and other code pages, which are not
+        // available by default on .NET Core / .NET 5+.
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+    }
+
     public virtual bool CanProcess => true;
 
     public virtual List<string> SupportedExtensions => new() { ".doc", ".docx" };

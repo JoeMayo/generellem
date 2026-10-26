@@ -6,6 +6,13 @@ public class TextProcessorTests
 {
     private const string DefaultDocumentReference = "mysource@file1.txt";
 
+    public TextProcessorTests()
+    {
+        // Static settings are shared across tests; reset to documented defaults.
+        TextProcessor.ChunkSize = 5000;
+        TextProcessor.Overlap = 100;
+    }
+
     [Fact]
     public void BreakIntoChunks_WithShortText_ReturnsOneChunk()
     {

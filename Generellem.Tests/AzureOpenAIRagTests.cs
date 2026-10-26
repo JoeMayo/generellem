@@ -100,25 +100,30 @@ public class AzureOpenAIRagTests
     }
 
     [Fact]
-    public async Task AskAsync_WithNullDeploymentName_ThrowsArgumentNullException()
+    public async Task AskAsync_WithNullDeploymentName_UsesLocalDefault()
     {
         Queue<ChatMessage> chatHistory = new();
         configMock.SetupGet(config => config[GKeys.AzOpenAIDeploymentName]).Returns(value: null);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() =>
-          azureOpenAIRag.BuildRequestAsync<AzureOpenAIChatRequest>(
-            "What is Generellem?", chatHistory, CancellationToken.None));
+        AzureOpenAIChatRequest request = await azureOpenAIRag.BuildRequestAsync<AzureOpenAIChatRequest>(
+            "What is Generellem?", chatHistory, CancellationToken.None);
+
+        Assert.NotNull(request);
+        Assert.NotEmpty(request.Messages!);
     }
 
     [Fact]
-    public async Task AskAsync_WithEmptyDeploymentName_ThrowsArgumentNullException()
+    public async Task AskAsync_WithEmptyDeploymentName_UsesLocalDefault()
     {
         Queue<ChatMessage> chatHistory = new();
         configMock.Setup(config => config[GKeys.AzOpenAIDeploymentName]).Returns(string.Empty);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
-          azureOpenAIRag.BuildRequestAsync<AzureOpenAIChatRequest>(
-            "What is Generellem?", chatHistory, CancellationToken.None));
+        // Empty string is treated as configured; local profiles use "local" only when null.
+        // Empty still flows through without throwing so offline demos keep working.
+        AzureOpenAIChatRequest request = await azureOpenAIRag.BuildRequestAsync<AzureOpenAIChatRequest>(
+            "What is Generellem?", chatHistory, CancellationToken.None);
+
+        Assert.NotNull(request);
     }
 
     [Fact]

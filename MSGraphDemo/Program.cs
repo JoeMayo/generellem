@@ -1,13 +1,7 @@
-﻿using Generellem.DocumentSource;
-using Generellem.Embedding;
-using Generellem.Embedding.AzureOpenAI;
-using Generellem.Llm;
-using Generellem.Llm.AzureOpenAI;
-using Generellem.Processors;
-using Generellem.Rag;
+using Generellem.DependencyInjection;
+using Generellem.DocumentSource;
 using Generellem.Repository;
 using Generellem.Services;
-using Generellem.Services.Azure;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,7 +23,9 @@ using MSGraphDemo;
 
 CancellationTokenSource tokenSource = new();
 
-IHost host = InitializeConfiguration(args);
+GenerellemProfile profile = ParseProfile(args);
+
+IHost host = InitializeConfiguration(args, profile);
 
 // config file location for this demo only
 GenerellemFiles.SubFolder = "MSGraphDemo";
@@ -38,7 +34,7 @@ ConfigureDB();
 
 await host.RunAsync(tokenSource.Token);
 
-IHost InitializeConfiguration(string[] args)
+IHost InitializeConfiguration(string[] args, GenerellemProfile selectedProfile)
 {
     HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
@@ -51,10 +47,11 @@ IHost InitializeConfiguration(string[] args)
         .AddJsonFile($"appsettings.{env.EnvironmentName}.json", true, true)
         .AddEnvironmentVariables();
 
-    ConfigureServices(builder.Services);
+    ConfigureServices(builder.Services, selectedProfile);
 
 #if DEBUG
-    builder.Configuration.AddUserSecrets<Program>();
+    if (selectedProfile == GenerellemProfile.Azure)
+        builder.Configuration.AddUserSecrets<Program>();
 #endif
 
     return builder.Build();
@@ -75,24 +72,40 @@ void ConfigureDB()
     }
 }
 
-void ConfigureServices(IServiceCollection services)
+void ConfigureServices(IServiceCollection services, GenerellemProfile selectedProfile)
 {
     services.AddHostedService<GenerellemHostedService>();
-
-    services.AddTransient<GenerellemContext>();
-    services.AddTransient<LlmClientFactory, LlmClientFactory>();
-
-    services.AddTransient<ISearchService, AzureSearchService>();
-    services.AddTransient<IDocumentHashRepository, DocumentHashRepository>();
     services.AddTransient<IDocumentSourceFactory, MSGraphDocumentSourceFactory>();
-    services.AddTransient<IDynamicConfiguration, DynamicConfiguration>();
-    services.AddTransient<IEmbedding, AzureOpenAIEmbedding>();
-    services.AddTransient<IGenerellemFiles, GenerellemFiles>();
-    services.AddTransient<IGenerellemIngestion, Ingestion>();
-    services.AddTransient<IGenerellemQuery, AzureOpenAIQuery>();
-    services.AddTransient<IHttpClientFactory, HttpClientFactory>();
-    services.AddTransient<ILlm, AzureOpenAILlm>();
     services.AddTransient<IMSGraphClientFactory, MSGraphDeviceCodeClientFactory>();
-    services.AddTransient<IPathProviderFactory, PathProviderFactory>();
-    services.AddTransient<IRag, GenerellemDefaultRag>();
+
+    // MS Graph demo typically needs real AI; default remains Azure unless overridden.
+    services.AddGenerellem(selectedProfile, options =>
+    {
+        if (selectedProfile == GenerellemProfile.Azure)
+            options.UseAzureSearch = true;
+    });
+}
+
+static GenerellemProfile ParseProfile(string[] args)
+{
+    for (int i = 0; i < args.Length; i++)
+    {
+        string arg = args[i];
+        if (arg.Equals("--profile", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            return ParseProfileValue(args[i + 1]);
+
+        if (arg.StartsWith("--profile=", StringComparison.OrdinalIgnoreCase))
+            return ParseProfileValue(arg["--profile=".Length..]);
+    }
+
+    return GenerellemProfile.Azure;
+}
+
+static GenerellemProfile ParseProfileValue(string value)
+{
+    if (Enum.TryParse(value, ignoreCase: true, out GenerellemProfile profile))
+        return profile;
+
+    Console.WriteLine($"Unknown profile '{value}'. Falling back to Azure.");
+    return GenerellemProfile.Azure;
 }

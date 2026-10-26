@@ -1,9 +1,11 @@
-﻿using Generellem.Embedding;
+﻿using Generellem.DependencyInjection;
+using Generellem.Embedding;
 using Generellem.Services.Exceptions;
 
 using Grpc.Core;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Polly;
 using Polly.Retry;
@@ -13,9 +15,15 @@ using Qdrant.Client.Grpc;
 
 namespace Generellem.Services.Qdrant;
 
-public class QdrantService(IDynamicConfiguration config, ILogger<QdrantService> logger) : ISearchService
+public class QdrantService(
+    IDynamicConfiguration config,
+    ILogger<QdrantService> logger,
+    IOptions<GenerellemOptions>? options = null) : ISearchService
 {
-    const int VectorSearchDimensions = 1536; // defined by text-embedding-ada-002
+    readonly int vectorSearchDimensions = options?.Value.EmbeddingDimensions > 0
+        ? options.Value.EmbeddingDimensions
+        : 1536;
+
     const string DocumentReference = "DocumentReference";
     const string ID = "ID";
     const string Content = "Content";
@@ -62,7 +70,7 @@ public class QdrantService(IDynamicConfiguration config, ILogger<QdrantService> 
                 async token =>
                     await client.CreateCollectionAsync(
                         collectionName: QdrantCollection,
-                        vectorsConfig: new VectorParams { Size = VectorSearchDimensions, Distance = Distance.Cosine },
+                        vectorsConfig: new VectorParams { Size = (ulong)vectorSearchDimensions, Distance = Distance.Cosine },
                         hnswConfig: new HnswConfigDiff { PayloadM = 16, M = 0 }),
                 cancelToken);
 

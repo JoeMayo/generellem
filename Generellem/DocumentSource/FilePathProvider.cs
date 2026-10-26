@@ -7,7 +7,8 @@ namespace Generellem.DocumentSource;
 
 public class FilePathProvider(IGenerellemFiles gemFiles) : IPathProvider
 {
-    readonly string[] ExcludedPaths = ["\\bin", "\\obj", ".git", ".vs"];
+    // Match path segments on Windows and Unix (\\bin alone fails on macOS/Linux).
+    readonly string[] ExcludedSegments = ["bin", "obj", ".git", ".vs"];
 
     /// <summary>
     /// Extracts file paths from the config file.
@@ -60,9 +61,13 @@ public class FilePathProvider(IGenerellemFiles gemFiles) : IPathProvider
     /// <returns>true if excluded, false if not.</returns>
     public virtual bool IsPathExcluded(string directoryPath)
     {
-        foreach (string xPath in ExcludedPaths)
-            if (directoryPath.Contains(xPath))
-                return true;
+        // Always treat both separators so Windows-style paths still match on Unix hosts.
+        string[] parts = directoryPath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (string part in parts)
+            foreach (string excluded in ExcludedSegments)
+                if (part.Equals(excluded, StringComparison.OrdinalIgnoreCase))
+                    return true;
 
         return false;
     }

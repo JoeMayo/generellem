@@ -63,4 +63,12 @@ public class GKeys
     public const string QdrantApiKey = "GenerellemQdrantApiKey";
     public const string QdrantCollection = "GenerellemQdrantCollection";
     public const string QdrantEndpoint = "GenerellemQdrantEndpoint";
+
+    //
+    // Ollama (local AI)
+    //
+
+    public const string OllamaEndpoint = "GenerellemOllamaEndpoint";
+    public const string OllamaChatModel = "GenerellemOllamaChatModel";
+    public const string OllamaEmbeddingModel = "GenerellemOllamaEmbeddingModel";
 }
