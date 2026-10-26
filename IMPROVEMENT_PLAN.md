@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phase 4 is next** after Phase 3 — search backends should behave the same before RAG and performance work.
+- **Phase 5 is next** — retrieval quality after the search backends match.
 
 ```mermaid
 flowchart LR
@@ -203,11 +203,11 @@ dotnet run -- --profile Azure
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **4.1** | Audit `ISearchService` contract | Document which methods each backend must support; decide: implement all vs split into focused interfaces |
-| **4.2** | Implement missing Azure Search methods | `GetDocumentReferencesByPathAsync`, `DeleteAllAsync`, `SearchBySourceReferenceAsync` work or throw `NotSupportedException` with clear messaging |
-| **4.3** | Align Azure Search index schema with Qdrant | `SourceReference`, tenant/group fields indexed consistently |
-| **4.4** | Implement `SearchBySourceReferenceAsync` in Qdrant | No `NotImplementedException` on either primary backend |
-| **4.5** | Add tests for parity gaps | Unit tests cover newly implemented methods; switching backend in demo is one config change |
+| **4.1** | Audit `ISearchService` contract | ✅ Done — keep one interface. InMemory, Sqlite, Qdrant, and Azure AI Search implement every method |
+| **4.2** | Implement missing Azure Search methods | ✅ Done — path lookup, delete-by-tenant, and source lookup use the same filters as Qdrant |
+| **4.3** | Align Azure Search index schema with Qdrant | ✅ Done — `SourceReference`, `Path`, `TenantID`, and `GroupID` are filterable. Existing indexes gain the fields on startup. New uploads store them |
+| **4.4** | Implement `SearchBySourceReferenceAsync` in Qdrant | ✅ Done — same lookup as `GetDocumentReferencesAsync`. Qdrant also indexes those payload fields |
+| **4.5** | Add tests for parity gaps | ✅ Done — schema, filters, and the new methods are covered. `Generellem:UseAzureSearch` switches the Azure profile's backend |
 
 **Estimated effort:** ~2 sessions  
 **Dependencies:** Phase 2–3
@@ -286,8 +286,8 @@ dotnet run -- --profile Azure
 | 1 — Quick wins | Complete | |
 | 2 — Easy local dev | Complete | Profiles: InMemory, Sqlite, Ollama, Azure |
 | 3 — DX & config | Complete | Options, startup validation, renamed HTTP client factory |
-| 4 — Search parity | Not started | **Next priority** |
-| 5 — RAG quality | Not started | |
+| 4 — Search parity | Complete | Qdrant and Azure AI Search implement the full `ISearchService` contract |
+| 5 — RAG quality | Not started | **Next priority** |
 | 6 — Performance | Not started | |
 | 7 — Hardening | Not started | |
 | 8 — Advanced | Backlog | |
@@ -299,4 +299,5 @@ dotnet run -- --profile Azure
 1. ~~Phase 1~~ — Complete
 2. ~~Phase 2~~ — Complete (clone-and-run + Ollama/Docker)
 3. ~~Phase 3~~ — Complete (options, startup validation, HTTP client rename)
-4. **Phase 4** — Search service parity
+4. ~~Phase 4~~ — Complete (Qdrant and Azure AI Search implement the same contract)
+5. **Phase 5** — RAG quality
