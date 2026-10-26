@@ -221,7 +221,7 @@ void ConfigureServices(IServiceCollection services)
     services.AddTransient<IAzureSearchService, AzureSearchService>();
     services.AddTransient<IDocumentHashRepository, DocumentHashRepository>();
     services.AddTransient<IDocumentSourceFactory, DemoDocumentSourceFactory>();
-    services.AddTransient<IHttpClientFactory, HttpClientFactory>();
+    services.AddTransient<IGenerellemHttpClientFactory, GenerellemHttpClientFactory>();
     services.AddTransient<ILlm, AzureOpenAILlm>();
     services.AddTransient<IRag, AzureOpenAIRag>();
 }
@@ -237,7 +237,7 @@ The `InitializeConfiguration` method calls `ConfigureServices(builder.Services)`
 | IAzureSearchService | This is using Azure Cognitive Search as a Vector DB, supporting the RAG process. |
 | IDocumentHashRepository | We use an object called a `DocumentHash` to determine whether a document has changed since the last time we saw it. This repository is for DB CRUD operations on the _DocumentHash_ table. |
 | IDocumentSourceFactory | Generellem supports any type of `IDocumentSource`, which defines a place where we find documents. Examples are `FileSystem` for Servers and LAN file systems and `Website` for an internal Web application. |
-| IHttpClientFactory | We need to use `HttpClient` for communicating with Web artifacts and this lets us build unit tests without explicit `HttpClient` dependencies. |
+| IGenerellemHttpClientFactory | We need to use `HttpClient` for communicating with Web artifacts and this lets us build unit tests without explicit `HttpClient` dependencies. The name avoids a collision with `System.Net.Http.IHttpClientFactory`. |
 | ILlm | This is the Large Language Model (LLM), such as Azure OpenAI. It provides the AI we use to respond to the user. |
 | IRag | The Retrieval Augmented Generation (RAG) process is instrumental in getting an LLM to understand your documentation. |
 

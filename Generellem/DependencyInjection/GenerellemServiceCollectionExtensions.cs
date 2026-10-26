@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using Generellem.DocumentSource;
 using Generellem.Embedding;
 using Generellem.Embedding.AzureOpenAI;
@@ -16,8 +18,10 @@ using Generellem.Services.InMemory;
 using Generellem.Services.Qdrant;
 using Generellem.Services.Sqlite;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 namespace Generellem.DependencyInjection;
 
@@ -30,18 +34,27 @@ public static class GenerellemServiceCollectionExtensions
     /// Registers Generellem services for the given <paramref name="profile"/>.
     /// Callers still register host-specific types such as <c>IDocumentSourceFactory</c> and hosted services.
     /// </summary>
+    /// <remarks>
+    /// Requires <see cref="IConfiguration"/> so the <c>Generellem</c> configuration section and
+    /// environment overrides can be applied when options are built.
+    /// </remarks>
     public static IServiceCollection AddGenerellem(
         this IServiceCollection services,
         GenerellemProfile profile,
         Action<GenerellemOptions>? configure = null)
     {
         services.AddOptions<GenerellemOptions>()
-            .Configure(options =>
+            .Configure<IConfiguration>((options, configuration) =>
             {
                 ApplyProfileDefaults(profile, options);
+                BindGenerellemSection(configuration.GetSection(GenerellemOptions.SectionName), options);
                 configure?.Invoke(options);
+                ApplyEnvironmentOverrides(configuration, options);
                 options.Profile = profile;
             });
+
+        // Run before any application hosted service so missing keys fail at startup.
+        services.Insert(0, ServiceDescriptor.Singleton<IHostedService, GenerellemStartupValidator>());
 
         services.TryAddTransient<GenerellemContext>();
         services.TryAddTransient<IDocumentHashRepository, DocumentHashRepository>();
@@ -49,9 +62,10 @@ public static class GenerellemServiceCollectionExtensions
         services.TryAddTransient<IGenerellemFiles, GenerellemFiles>();
         services.TryAddTransient<IGenerellemIngestion, Ingestion>();
         services.TryAddTransient<IGenerellemQuery, AzureOpenAIQuery>();
-        services.TryAddTransient<IHttpClientFactory, HttpClientFactory>();
+        services.TryAddTransient<IGenerellemHttpClientFactory, GenerellemHttpClientFactory>();
         services.TryAddTransient<IPathProviderFactory, PathProviderFactory>();
         services.TryAddTransient<IRag, GenerellemDefaultRag>();
+        services.TryAddTransient<TextProcessor>();
 
         switch (profile)
         {
@@ -109,6 +123,9 @@ public static class GenerellemServiceCollectionExtensions
     {
         options.Profile = profile;
         options.TopK = 3;
+        options.ChunkSize = 5000;
+        options.ChunkOverlap = 100;
+        options.Temperature = 0;
 
         switch (profile)
         {
@@ -123,5 +140,64 @@ public static class GenerellemServiceCollectionExtensions
                 options.EmbeddingDimensions = 1536;
                 break;
         }
+    }
+
+    static void BindGenerellemSection(IConfigurationSection section, GenerellemOptions options)
+    {
+        if (int.TryParse(section[nameof(GenerellemOptions.EmbeddingDimensions)], out int embeddingDimensions))
+            options.EmbeddingDimensions = embeddingDimensions;
+
+        if (int.TryParse(section[nameof(GenerellemOptions.ChunkSize)], out int chunkSize))
+            options.ChunkSize = chunkSize;
+
+        if (int.TryParse(section[nameof(GenerellemOptions.ChunkOverlap)], out int chunkOverlap))
+            options.ChunkOverlap = chunkOverlap;
+
+        if (int.TryParse(section[nameof(GenerellemOptions.TopK)], out int topK))
+            options.TopK = topK;
+
+        if (float.TryParse(
+                section[nameof(GenerellemOptions.Temperature)],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out float temperature))
+            options.Temperature = temperature;
+
+        string? subFolder = section[nameof(GenerellemOptions.SubFolder)];
+        if (subFolder is not null)
+            options.SubFolder = subFolder;
+
+        string? ollamaEndpoint = section[nameof(GenerellemOptions.OllamaEndpoint)];
+        if (!string.IsNullOrWhiteSpace(ollamaEndpoint))
+            options.OllamaEndpoint = ollamaEndpoint;
+
+        string? ollamaChat = section[nameof(GenerellemOptions.OllamaChatModel)];
+        if (!string.IsNullOrWhiteSpace(ollamaChat))
+            options.OllamaChatModel = ollamaChat;
+
+        string? ollamaEmbed = section[nameof(GenerellemOptions.OllamaEmbeddingModel)];
+        if (!string.IsNullOrWhiteSpace(ollamaEmbed))
+            options.OllamaEmbeddingModel = ollamaEmbed;
+
+        if (bool.TryParse(section[nameof(GenerellemOptions.OllamaUseSqliteSearch)], out bool ollamaUseSqlite))
+            options.OllamaUseSqliteSearch = ollamaUseSqlite;
+
+        if (bool.TryParse(section[nameof(GenerellemOptions.UseAzureSearch)], out bool useAzureSearch))
+            options.UseAzureSearch = useAzureSearch;
+    }
+
+    static void ApplyEnvironmentOverrides(IConfiguration configuration, GenerellemOptions options)
+    {
+        string? envEndpoint = configuration[GKeys.OllamaEndpoint];
+        if (!string.IsNullOrWhiteSpace(envEndpoint))
+            options.OllamaEndpoint = envEndpoint;
+
+        string? envChat = configuration[GKeys.OllamaChatModel];
+        if (!string.IsNullOrWhiteSpace(envChat))
+            options.OllamaChatModel = envChat;
+
+        string? envEmbed = configuration[GKeys.OllamaEmbeddingModel];
+        if (!string.IsNullOrWhiteSpace(envEmbed))
+            options.OllamaEmbeddingModel = envEmbed;
     }
 }

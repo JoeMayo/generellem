@@ -1,12 +1,12 @@
 ﻿namespace Generellem.Services.Tests;
 
-public class HttpClientFactoryTests
+public class GenerellemHttpClientFactoryTests
 {
-    readonly HttpClientFactory httpClientFact;
+    readonly GenerellemHttpClientFactory httpClientFact;
 
-    public HttpClientFactoryTests()
+    public GenerellemHttpClientFactoryTests()
     {
-        httpClientFact = new HttpClientFactory();
+        httpClientFact = new GenerellemHttpClientFactory();
     }
 
     [Fact]

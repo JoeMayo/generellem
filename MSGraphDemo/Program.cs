@@ -27,9 +27,6 @@ GenerellemProfile profile = ParseProfile(args);
 
 IHost host = InitializeConfiguration(args, profile);
 
-// config file location for this demo only
-GenerellemFiles.SubFolder = "MSGraphDemo";
-
 ConfigureDB();
 
 await host.RunAsync(tokenSource.Token);
@@ -81,6 +78,7 @@ void ConfigureServices(IServiceCollection services, GenerellemProfile selectedPr
     // MS Graph demo typically needs real AI; default remains Azure unless overridden.
     services.AddGenerellem(selectedProfile, options =>
     {
+        options.SubFolder = "MSGraphDemo";
         if (selectedProfile == GenerellemProfile.Azure)
             options.UseAzureSearch = true;
     });

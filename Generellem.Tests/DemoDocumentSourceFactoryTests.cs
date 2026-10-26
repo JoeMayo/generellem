@@ -9,7 +9,7 @@ public class DemoDocumentSourceFactoryTests
     [Fact]
     public void GetDocumentSources_ReturnsExpected()
     {
-        Mock<IHttpClientFactory> httpClientFactMock = new();
+        Mock<IGenerellemHttpClientFactory> httpClientFactMock = new();
         Mock<ILogger<Website>> loggerMock = new();
         Mock<IPathProviderFactory> pathProviderFactMock = new();
 

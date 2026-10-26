@@ -1,15 +1,18 @@
 ﻿using Azure;
 using Azure.AI.OpenAI;
 
+using Generellem.DependencyInjection;
 using Generellem.Document.DocumentTypes;
 using Generellem.Embedding;
 using Generellem.Embedding.AzureOpenAI;
 using Generellem.Llm;
 using Generellem.Processors;
+using Generellem.Rag;
 using Generellem.Services;
 using Generellem.Tests;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenAI.Embeddings;
 
@@ -85,15 +88,18 @@ public class AzureOpenAIEmbedTests
             .Setup(srchSvc => srchSvc.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(chunks);
 
-        azureOpenAiEmbedding = new AzureOpenAIEmbedding(llmClientFactMock.Object, logMock.Object);
+        azureOpenAiEmbedding = CreateSut();
     }
+
+    static TextProcessor Processor(int chunkSize, int overlap) =>
+        new(Options.Create(new GenerellemOptions { ChunkSize = chunkSize, ChunkOverlap = overlap }));
+
+    AzureOpenAIEmbedding CreateSut(int chunkSize = 5000, int overlap = 100) =>
+        new(llmClientFactMock.Object, logMock.Object, Processor(chunkSize, overlap));
 
     [Fact]
     public async Task EmbedAsync_CallsGenerateEmbeddingAsync()
     {
-        TextProcessor.ChunkSize = 5000;
-        TextProcessor.Overlap = 100;
-
         await azureOpenAiEmbedding.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         llmClientFactMock.Verify(
@@ -107,46 +113,33 @@ public class AzureOpenAIEmbedTests
     [Fact]
     public async Task EmbedAsync_WithNoOverlap_BreaksTextInto2Chunks()
     {
-        int oldChunSize = TextProcessor.ChunkSize;
-        int oldOverlap = TextProcessor.Overlap;
-        TextProcessor.ChunkSize = 9;
-        TextProcessor.Overlap = 0;
+        AzureOpenAIEmbedding sut = CreateSut(chunkSize: 9, overlap: 0);
 
-        await azureOpenAiEmbedding.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
+        await sut.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         embeddingClientMock.Verify(
             client => client.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
-        TextProcessor.ChunkSize = oldChunSize;
-        TextProcessor.Overlap = oldOverlap;
     }
 
     [Fact]
     public async Task EmbedAsync_WithOverlap_BreaksTextInto3Chunks()
     {
-        int oldChunSize = TextProcessor.ChunkSize;
-        int oldOverlap = TextProcessor.Overlap;
-        TextProcessor.ChunkSize = 9;
-        TextProcessor.Overlap = 2;
+        AzureOpenAIEmbedding sut = CreateSut(chunkSize: 9, overlap: 2);
 
-        await azureOpenAiEmbedding.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
+        await sut.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         embeddingClientMock.Verify(
             client => client.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
             Times.Exactly(3));
-        TextProcessor.ChunkSize = oldChunSize;
-        TextProcessor.Overlap = oldOverlap;
     }
 
     [Fact]
     public async Task EmbedAsync_OverlapsChunks()
     {
-        int oldChunSize = TextProcessor.ChunkSize;
-        int oldOverlap = TextProcessor.Overlap;
-        TextProcessor.ChunkSize = 11;
-        TextProcessor.Overlap = 3;
+        AzureOpenAIEmbedding sut = CreateSut(chunkSize: 11, overlap: 3);
 
-        await azureOpenAiEmbedding.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
+        await sut.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         embeddingClientMock.Verify(
             client => client.GenerateEmbeddingAsync("Test docume", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
@@ -154,8 +147,6 @@ public class AzureOpenAIEmbedTests
         embeddingClientMock.Verify(
             client => client.GenerateEmbeddingAsync("ument text", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
             Times.Once);
-        TextProcessor.ChunkSize = oldChunSize;
-        TextProcessor.Overlap = oldOverlap;
     }
 
     [Fact]

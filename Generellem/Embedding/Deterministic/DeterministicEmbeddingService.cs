@@ -15,7 +15,7 @@ namespace Generellem.Embedding.Deterministic;
 /// <summary>
 /// Hash-based embeddings for offline demos. Similar text produces similar vectors without an API.
 /// </summary>
-public class DeterministicEmbeddingService(IOptions<GenerellemOptions> options) : IEmbedding
+public class DeterministicEmbeddingService(IOptions<GenerellemOptions> options, TextProcessor textProcessor) : IEmbedding
 {
     readonly GenerellemOptions options = options.Value;
 
@@ -28,7 +28,7 @@ public class DeterministicEmbeddingService(IOptions<GenerellemOptions> options) 
         IProgress<IngestionProgress> progress,
         CancellationToken cancellationToken)
     {
-        List<TextChunk> chunks = TextProcessor.BreakIntoChunks(fullText, fileName);
+        List<TextChunk> chunks = textProcessor.BreakIntoChunks(fullText, fileName);
 
         int chunkCount = chunks.Count;
         int count = 0;

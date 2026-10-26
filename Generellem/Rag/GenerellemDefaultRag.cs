@@ -1,5 +1,6 @@
 ﻿using Azure;
 
+using Generellem.DependencyInjection;
 using Generellem.Embedding;
 using Generellem.Llm;
 using Generellem.Llm.AzureOpenAI;
@@ -7,6 +8,7 @@ using Generellem.Processors;
 using Generellem.Services;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenAI.Chat;
 
@@ -25,7 +27,8 @@ public class GenerellemDefaultRag(
     IDynamicConfiguration config,
     IEmbedding embedding,
     ILlm llm,
-    ILogger<GenerellemDefaultRag> logger)
+    ILogger<GenerellemDefaultRag> logger,
+    IOptions<GenerellemOptions>? generellemOptions = null)
     : IRag
 {
     /// <summary>
@@ -50,7 +53,7 @@ public class GenerellemDefaultRag(
     /// <summary>
     /// Tradeoff in accuracy vs creativity - ranges from 0 to 2 in OpenAI
     /// </summary>
-    public float Temperature { get; set; } = 0;
+    public float Temperature { get; set; } = generellemOptions?.Value.Temperature ?? 0;
 
     /// <summary>
     /// Builds a request based on prompt content.

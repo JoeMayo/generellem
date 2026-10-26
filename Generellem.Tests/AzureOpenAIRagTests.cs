@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.AI.OpenAI;
 
+using Generellem.DependencyInjection;
 using Generellem.Embedding;
 using Generellem.Llm;
 using Generellem.Llm.AzureOpenAI;
@@ -10,6 +11,7 @@ using Generellem.Services;
 using Generellem.Tests;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenAI.Chat;
 
@@ -75,6 +77,20 @@ public class AzureOpenAIRagTests
                 embedMock.Object, 
                 llmMock.Object, 
                 logMock.Object);
+    }
+
+    [Fact]
+    public void Temperature_DefaultsFromOptions()
+    {
+        GenerellemDefaultRag rag = new(
+            azSearchSvcMock.Object,
+            configMock.Object,
+            embedMock.Object,
+            llmMock.Object,
+            logMock.Object,
+            Options.Create(new GenerellemOptions { Temperature = 0.7f }));
+
+        Assert.Equal(0.7f, rag.Temperature);
     }
 
     [Fact]

@@ -7,8 +7,11 @@ using Generellem.Services;
 using Generellem.Services.InMemory;
 using Generellem.Services.Sqlite;
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace Generellem.DependencyInjection.Tests;
 
@@ -65,5 +68,118 @@ public class AddGenerellemTests
         ISearchService b = sp.GetRequiredService<ISearchService>();
 
         Assert.Same(a, b);
+    }
+
+    [Fact]
+    public void AddGenerellem_BindsSectionCallbackAndEnvironmentOverrides()
+    {
+        Dictionary<string, string?> values = new()
+        {
+            ["Generellem:ChunkSize"] = "1200",
+            ["Generellem:ChunkOverlap"] = "50",
+            ["Generellem:TopK"] = "7",
+            ["Generellem:Temperature"] = "0.4",
+            ["Generellem:SubFolder"] = "FromJson",
+            ["Generellem:OllamaChatModel"] = "from-json",
+            ["Generellem:Profile"] = "Azure",
+            [GKeys.OllamaChatModel] = "from-env"
+        };
+
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new MapConfiguration(values));
+        services.AddGenerellem(GenerellemProfile.InMemory, options => options.SubFolder = "ConsoleDemo");
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+        GenerellemOptions opts = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value;
+
+        Assert.Equal(GenerellemProfile.InMemory, opts.Profile);
+        Assert.Equal(64, opts.EmbeddingDimensions);
+        Assert.Equal(1200, opts.ChunkSize);
+        Assert.Equal(50, opts.ChunkOverlap);
+        Assert.Equal(7, opts.TopK);
+        Assert.Equal(0.4f, opts.Temperature);
+        Assert.Equal("ConsoleDemo", opts.SubFolder);
+        Assert.Equal("from-env", opts.OllamaChatModel);
+    }
+
+    [Fact]
+    public void AddGenerellem_RegistersStartupValidatorBeforeOtherHostedServices()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+        services.AddHostedService<MarkerHostedService>();
+
+        services.AddGenerellem(GenerellemProfile.InMemory);
+
+        ServiceDescriptor firstHosted = services.First(descriptor => descriptor.ServiceType == typeof(IHostedService));
+        Assert.Equal(typeof(GenerellemStartupValidator), firstHosted.ImplementationType);
+    }
+
+    sealed class MarkerHostedService : IHostedService
+    {
+        public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    }
+
+    sealed class MapConfiguration(Dictionary<string, string?> values) : IConfiguration
+    {
+        public string? this[string key]
+        {
+            get => values.TryGetValue(key, out string? value) ? value : null;
+            set => values[key] = value;
+        }
+
+        public IEnumerable<IConfigurationSection> GetChildren() => [];
+
+        public IChangeToken GetReloadToken() => EmptyChangeToken.Instance;
+
+        public IConfigurationSection GetSection(string key) => new MapSection(this, key);
+
+        sealed class MapSection(MapConfiguration root, string path) : IConfigurationSection
+        {
+            public string Key => path.Split(':')[^1];
+
+            public string Path => path;
+
+            public string? Value
+            {
+                get => root[path];
+                set => root[path] = value;
+            }
+
+            public string? this[string key]
+            {
+                get => root[path + ":" + key];
+                set => root[path + ":" + key] = value;
+            }
+
+            public IEnumerable<IConfigurationSection> GetChildren() => [];
+
+            public IChangeToken GetReloadToken() => EmptyChangeToken.Instance;
+
+            public IConfigurationSection GetSection(string key) => new MapSection(root, path + ":" + key);
+        }
+
+        sealed class EmptyChangeToken : IChangeToken
+        {
+            public static readonly EmptyChangeToken Instance = new();
+
+            public bool HasChanged => false;
+
+            public bool ActiveChangeCallbacks => false;
+
+            public IDisposable RegisterChangeCallback(Action<object?> callback, object? state) => EmptyDisposable.Instance;
+        }
+
+        sealed class EmptyDisposable : IDisposable
+        {
+            public static readonly EmptyDisposable Instance = new();
+
+            public void Dispose()
+            {
+            }
+        }
     }
 }

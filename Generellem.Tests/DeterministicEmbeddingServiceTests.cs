@@ -3,6 +3,7 @@ using Generellem.Document.DocumentTypes;
 using Generellem.Embedding;
 using Generellem.Embedding.Deterministic;
 using Generellem.Processors;
+using Generellem.Rag;
 
 using Microsoft.Extensions.Options;
 
@@ -15,7 +16,7 @@ public class DeterministicEmbeddingServiceTests
     public DeterministicEmbeddingServiceTests()
     {
         GenerellemOptions options = new() { EmbeddingDimensions = 32 };
-        sut = new DeterministicEmbeddingService(Options.Create(options));
+        sut = new DeterministicEmbeddingService(Options.Create(options), new TextProcessor(Options.Create(options)));
     }
 
     [Fact]

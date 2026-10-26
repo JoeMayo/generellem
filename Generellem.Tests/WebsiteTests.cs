@@ -13,7 +13,7 @@ public class WebsiteTests
     readonly Mock<HttpClient> httpClientMock = new();
     readonly Mock<HttpMessageHandler> httpMsgHandlerMock = new();
 
-    readonly Mock<IHttpClientFactory> httpClientFactMock = new();
+    readonly Mock<IGenerellemHttpClientFactory> httpClientFactMock = new();
     readonly Mock<ILogger<Website>> loggerMock = new();
     readonly Mock<IPathProvider> pathProviderMock = new();
     readonly Mock<IPathProviderFactory> pathProviderFactMock = new();

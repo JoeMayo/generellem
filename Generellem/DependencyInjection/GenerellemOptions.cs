@@ -18,9 +18,30 @@ public class GenerellemOptions
     public int EmbeddingDimensions { get; set; } = 1536;
 
     /// <summary>
+    /// Maximum characters per text chunk.
+    /// </summary>
+    public int ChunkSize { get; set; } = 5000;
+
+    /// <summary>
+    /// Characters repeated at the boundary between adjacent chunks.
+    /// Must be zero or greater and less than <see cref="ChunkSize"/>.
+    /// </summary>
+    public int ChunkOverlap { get; set; } = 100;
+
+    /// <summary>
     /// Number of chunks returned from vector search.
     /// </summary>
     public int TopK { get; set; } = 3;
+
+    /// <summary>
+    /// LLM temperature. The useful range depends on the model.
+    /// </summary>
+    public float Temperature { get; set; }
+
+    /// <summary>
+    /// AppData subfolder so one Generellem host does not overwrite another's files.
+    /// </summary>
+    public string SubFolder { get; set; } = string.Empty;
 
     /// <summary>
     /// Ollama base URL (no trailing slash).
