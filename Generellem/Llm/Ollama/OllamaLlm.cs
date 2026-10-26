@@ -18,7 +18,7 @@ namespace Generellem.Llm.Ollama;
 /// Chat completions via local Ollama HTTP API.
 /// </summary>
 public class OllamaLlm(
-    IHttpClientFactory httpClientFactory,
+    IGenerellemHttpClientFactory httpClientFactory,
     IOptions<GenerellemOptions> options,
     ILogger<OllamaLlm> logger)
     : ILlm
@@ -73,7 +73,11 @@ public class OllamaLlm(
             {
                 Model = options.OllamaChatModel,
                 Messages = messages,
-                Stream = false
+                Stream = false,
+                Options = new OllamaRequestOptions
+                {
+                    Temperature = chatRequest.Options?.Temperature ?? options.Temperature
+                }
             };
 
             OllamaChatResponse? response = await Pipeline.ExecuteAsync(
@@ -107,6 +111,15 @@ public class OllamaLlm(
 
         [JsonPropertyName("stream")]
         public bool Stream { get; set; }
+
+        [JsonPropertyName("options")]
+        public OllamaRequestOptions Options { get; set; } = new();
+    }
+
+    sealed class OllamaRequestOptions
+    {
+        [JsonPropertyName("temperature")]
+        public float Temperature { get; set; }
     }
 
     sealed class OllamaMessage

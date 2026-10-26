@@ -1,22 +1,26 @@
-﻿using System.Text;
+using Generellem.DependencyInjection;
 using Generellem.Embedding;
+
+using Microsoft.Extensions.Options;
 
 namespace Generellem.Rag;
 
 /// <summary>
-/// Various methods for processing text
+/// Various methods for processing text.
 /// </summary>
-public class TextProcessor
+public class TextProcessor(IOptions<GenerellemOptions> options)
 {
-    /// <summary>
-    /// Maximum size per text chunk. (default = 5000)
-    /// </summary>
-    public static int ChunkSize { get; set; } = 5000;
+    readonly GenerellemOptions options = options.Value;
 
     /// <summary>
-    /// Number of characters to overlap between chunks. (default = 100)
+    /// Maximum size per text chunk.
     /// </summary>
-    public static int Overlap { get; set; } = 100;
+    public int ChunkSize => options.ChunkSize;
+
+    /// <summary>
+    /// Number of characters to overlap between chunks.
+    /// </summary>
+    public int Overlap => options.ChunkOverlap;
 
     /// <summary>
     /// Breaks a string into chunks with overlap.
@@ -24,18 +28,29 @@ public class TextProcessor
     /// <param name="text">Full text string to break apart.</param>
     /// <param name="documentReference">Reference to file. e.g. either a path, url, or some other indicator of where the file came from</param>
     /// <returns>List of <see cref="TextChunk"/> representing input text.</returns>
-    public static List<TextChunk> BreakIntoChunks(string text, string documentReference)
+    public List<TextChunk> BreakIntoChunks(string text, string documentReference)
     {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (ChunkSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(ChunkSize), ChunkSize, "Chunk size must be greater than 0.");
+
+        if (Overlap < 0 || Overlap >= ChunkSize)
+            throw new ArgumentOutOfRangeException(nameof(Overlap), Overlap, "Chunk overlap must be zero or greater and less than chunk size.");
+
         List<TextChunk> chunks = [];
-        
+
         int chunkSize = Math.Min(text.Length, Math.Max(0, ChunkSize));
         int overlap = chunkSize < Overlap ? 0 : Overlap;
+        int step = chunkSize - overlap;
+        if (step <= 0)
+            step = Math.Max(chunkSize, 1);
 
-        for(int i = 0; i < text.Length; i += (chunkSize - overlap)) 
+        for (int i = 0; i < text.Length; i += step)
         {
             int start = i;
             int end = Math.Min(i + ChunkSize, text.Length);
-            
+
             string content = text[start..end];
 
             int sourceRefSeparatorPos = documentReference.IndexOf("@");
@@ -52,7 +67,7 @@ public class TextProcessor
                     SourceReference = sourceReference
                 });
         }
-        
+
         return chunks;
     }
 }

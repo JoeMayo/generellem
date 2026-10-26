@@ -18,16 +18,24 @@ namespace Generellem.Embedding.Ollama;
 /// Embeddings via local Ollama HTTP API.
 /// </summary>
 public class OllamaEmbedding(
-    IHttpClientFactory httpClientFactory,
+    IGenerellemHttpClientFactory httpClientFactory,
     IOptions<GenerellemOptions> options,
-    ILogger<OllamaEmbedding> logger)
+    ILogger<OllamaEmbedding> logger,
+    TextProcessor textProcessor)
     : IEmbedding
 {
-    static IProgress<IngestionProgress>? currentProgress;
+    IProgress<IngestionProgress>? currentProgress;
+    ResiliencePipeline? pipeline;
 
     readonly GenerellemOptions options = options.Value;
 
-    public ResiliencePipeline Pipeline { get; set; } =
+    public ResiliencePipeline Pipeline
+    {
+        get => pipeline ??= CreatePipeline();
+        set => pipeline = value;
+    }
+
+    ResiliencePipeline CreatePipeline() =>
         new ResiliencePipelineBuilder()
             .AddRetry(new()
             {
@@ -36,7 +44,7 @@ public class OllamaEmbedding(
                 UseJitter = true,
                 MaxRetryAttempts = 5,
                 Delay = TimeSpan.FromSeconds(2),
-                OnRetry = static args =>
+                OnRetry = args =>
                 {
                     currentProgress?.Report(new("Ollama busy, retrying embedding..."));
                     return default;
@@ -53,23 +61,30 @@ public class OllamaEmbedding(
     {
         currentProgress = progress;
 
-        List<TextChunk> chunks = TextProcessor.BreakIntoChunks(fullText, fileName);
-
-        int chunkCount = chunks.Count;
-        int count = 0;
-        string plural = chunkCount == 1 ? "" : "s";
-
-        foreach (TextChunk chunk in chunks)
+        try
         {
-            if (chunk.Content is null)
-                continue;
+            List<TextChunk> chunks = textProcessor.BreakIntoChunks(fullText, fileName);
 
-            chunk.Order = ++count;
-            progress.Report(new($"Processing {chunk.Order} of {chunkCount} chunk{plural}"));
-            chunk.Embedding = await GetEmbeddingAsync(chunk.Content, cancellationToken);
+            int chunkCount = chunks.Count;
+            int count = 0;
+            string plural = chunkCount == 1 ? "" : "s";
+
+            foreach (TextChunk chunk in chunks)
+            {
+                if (chunk.Content is null)
+                    continue;
+
+                chunk.Order = ++count;
+                progress.Report(new($"Processing {chunk.Order} of {chunkCount} chunk{plural}"));
+                chunk.Embedding = await GetEmbeddingAsync(chunk.Content, cancellationToken);
+            }
+
+            return chunks;
         }
-
-        return chunks;
+        finally
+        {
+            currentProgress = null;
+        }
     }
 
     public async Task<ReadOnlyMemory<float>> GetEmbeddingAsync(string text, CancellationToken cancellationToken)

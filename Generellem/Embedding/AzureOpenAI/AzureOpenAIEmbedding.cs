@@ -19,12 +19,20 @@ namespace Generellem.Embedding.AzureOpenAI;
 
 public class AzureOpenAIEmbedding(
     ILlmClientFactory llmClientFact, 
-    ILogger<AzureOpenAIEmbedding> logger)
+    ILogger<AzureOpenAIEmbedding> logger,
+    TextProcessor textProcessor)
     : IEmbedding
 {
-    static IProgress<IngestionProgress>? currentProgress = null;
+    IProgress<IngestionProgress>? currentProgress;
+    ResiliencePipeline? pipeline;
 
-    public ResiliencePipeline Pipeline { get; set; } =
+    public ResiliencePipeline Pipeline
+    {
+        get => pipeline ??= CreatePipeline();
+        set => pipeline = value;
+    }
+
+    ResiliencePipeline CreatePipeline() =>
         new ResiliencePipelineBuilder()
             .AddRetry(new()
             {
@@ -33,7 +41,7 @@ public class AzureOpenAIEmbedding(
                 UseJitter = true,  // Adds a random factor to the delay
                 MaxRetryAttempts = 10,
                 Delay = TimeSpan.FromSeconds(3),
-                OnRetry = static args =>
+                OnRetry = args =>
                 {
                     currentProgress?.Report(new("System busy, delaying a few seconds..."));
                     return default;
@@ -54,38 +62,45 @@ public class AzureOpenAIEmbedding(
     {
         currentProgress = progress;
 
-        List<TextChunk> chunks = TextProcessor.BreakIntoChunks(fullText, documentReference);
-
-        int chunkCount = chunks.Count;
-        int count = 0;
-        string plural = chunkCount == 1 ? "" : "s";
-
-        EmbeddingClient embeddingClient = llmClientFact.CreateEmbeddingClient();
-
-        foreach (TextChunk chunk in chunks)
+        try
         {
-            if (chunk.Content is null) continue;
+            List<TextChunk> chunks = textProcessor.BreakIntoChunks(fullText, documentReference);
 
-            chunk.Order = ++count;
-            progress.Report(new($"Processing {chunk.Order} of {chunkCount} chunk{plural}"));
+            int chunkCount = chunks.Count;
+            int count = 0;
+            string plural = chunkCount == 1 ? "" : "s";
 
-            try
+            EmbeddingClient embeddingClient = llmClientFact.CreateEmbeddingClient();
+
+            foreach (TextChunk chunk in chunks)
             {
-                ClientResult<OpenAIEmbedding> embeddingResult = 
-                    await Pipeline.ExecuteAsync(
-                        async _ => await embeddingClient.GenerateEmbeddingAsync(chunk.Content),
-                        cancellationToken);
+                if (chunk.Content is null) continue;
 
-                chunk.Embedding = embeddingResult.Value.ToFloats();
+                chunk.Order = ++count;
+                progress.Report(new($"Processing {chunk.Order} of {chunkCount} chunk{plural}"));
+
+                try
+                {
+                    ClientResult<OpenAIEmbedding> embeddingResult = 
+                        await Pipeline.ExecuteAsync(
+                            async _ => await embeddingClient.GenerateEmbeddingAsync(chunk.Content),
+                            cancellationToken);
+
+                    chunk.Embedding = embeddingResult.Value.ToFloats();
+                }
+                catch (RequestFailedException rfEx)
+                {
+                    logger.LogError(GenerellemLogEvents.AuthorizationFailure, rfEx, "Please check credentials and exception details for more info.");
+                    throw;
+                }
             }
-            catch (RequestFailedException rfEx)
-            {
-                logger.LogError(GenerellemLogEvents.AuthorizationFailure, rfEx, "Please check credentials and exception details for more info.");
-                throw;
-            }
+
+            return chunks;
         }
-
-        return chunks;
+        finally
+        {
+            currentProgress = null;
+        }
     }
 
     public async Task<ReadOnlyMemory<float>> GetEmbeddingAsync(string text, CancellationToken cancellationToken)

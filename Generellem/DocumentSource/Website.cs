@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-using IHttpClientFactory = Generellem.Services.IHttpClientFactory;
+
 
 namespace Generellem.DocumentSource;
 
@@ -28,7 +28,7 @@ public class Website : IDocumentSource
     readonly ILogger<Website> logger;
     readonly IPathProvider pathProvider;
 
-    public Website(IHttpClientFactory httpFact, ILogger<Website> logger, IPathProviderFactory pathProviderFact)
+    public Website(IGenerellemHttpClientFactory httpFact, ILogger<Website> logger, IPathProviderFactory pathProviderFact)
     {
         this.httpClient = httpFact.Create();
         this.logger = logger;

@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phase 2 is the new priority** after Phase 1 — get clone-and-run working before cloud hardening.
+- **Phase 4 is next** after Phase 3 — search backends should behave the same before RAG and performance work.
 
 ```mermaid
 flowchart LR
@@ -187,10 +187,10 @@ dotnet run -- --profile Azure
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **3.1** | Expand `GenerellemOptions` | Chunk size, overlap, top-K, temperature, profile-specific settings in one options class |
-| **3.2** | Replace static mutable config | `GenerellemFiles.SubFolder`, `TextProcessor` settings, and embedding progress use instance/options scope |
-| **3.3** | Startup configuration validation | Missing required keys produce clear errors at startup per profile (InMemory validates nothing; Azure validates all `GKeys`) |
-| **3.4** | Rename custom `IHttpClientFactory` | Renamed to avoid collision with `System.Net.Http.IHttpClientFactory`; all references updated |
+| **3.1** | Expand `GenerellemOptions` | ✅ Done — chunk size, overlap, top-K, temperature, subfolder, and profile settings bind from the `Generellem` section; Ollama env keys still override |
+| **3.2** | Replace static mutable config | ✅ Done — `SubFolder`, chunk settings, and embedding retry progress are instance/options scoped |
+| **3.3** | Startup configuration validation | ✅ Done — `GenerellemStartupValidator` runs first. InMemory and Sqlite require no keys. Ollama checks its endpoint and models. Azure requires Azure OpenAI plus Qdrant, or Azure AI Search when `UseAzureSearch` is set. Invalid chunk settings fail for every profile |
+| **3.4** | Rename custom `IHttpClientFactory` | ✅ Done — `IGenerellemHttpClientFactory` / `GenerellemHttpClientFactory`; references updated |
 
 **Estimated effort:** ~2 sessions  
 **Dependencies:** Phase 2 (profiles and options introduced together)
@@ -285,8 +285,8 @@ dotnet run -- --profile Azure
 |-------|--------|-------|
 | 1 — Quick wins | Complete | |
 | 2 — Easy local dev | Complete | Profiles: InMemory, Sqlite, Ollama, Azure |
-| 3 — DX & config | Not started | **Next priority** |
-| 4 — Search parity | Not started | |
+| 3 — DX & config | Complete | Options, startup validation, renamed HTTP client factory |
+| 4 — Search parity | Not started | **Next priority** |
 | 5 — RAG quality | Not started | |
 | 6 — Performance | Not started | |
 | 7 — Hardening | Not started | |
@@ -298,5 +298,5 @@ dotnet run -- --profile Azure
 
 1. ~~Phase 1~~ — Complete
 2. ~~Phase 2~~ — Complete (clone-and-run + Ollama/Docker)
-3. **Phase 3** — DX & configuration polish
-4. Continue with Phase 4+
+3. ~~Phase 3~~ — Complete (options, startup validation, HTTP client rename)
+4. **Phase 4** — Search service parity

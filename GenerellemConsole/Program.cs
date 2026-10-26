@@ -16,9 +16,6 @@ GenerellemProfile profile = ParseProfile(args);
 
 IHost host = InitializeConfiguration(args, profile);
 
-// config file location for this demo only
-GenerellemFiles.SubFolder = "ConsoleDemo";
-
 ConfigureDB();
 
 await host.RunAsync(tokenSource.Token);
@@ -38,7 +35,7 @@ IHost InitializeConfiguration(string[] args, GenerellemProfile selectedProfile)
         .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
         .AddEnvironmentVariables();
 
-    ConfigureServices(builder.Services, builder.Configuration, selectedProfile);
+    ConfigureServices(builder.Services, selectedProfile);
 
 #if DEBUG
     // User secrets only needed for Azure (and optionally Ollama overrides).
@@ -64,57 +61,14 @@ void ConfigureDB()
     }
 }
 
-void ConfigureServices(IServiceCollection services, IConfiguration configuration, GenerellemProfile selectedProfile)
+void ConfigureServices(IServiceCollection services, GenerellemProfile selectedProfile)
 {
     services.AddHostedService<GenerellemHostedService>();
     services.AddTransient<IDocumentSourceFactory, EnterpriseDocumentSourceFactory>();
 
     services.AddGenerellem(selectedProfile, options =>
     {
-        IConfigurationSection section = configuration.GetSection(GenerellemOptions.SectionName);
-        if (section.Exists())
-        {
-            string? dims = section["EmbeddingDimensions"];
-            if (int.TryParse(dims, out int embeddingDimensions) && embeddingDimensions > 0)
-                options.EmbeddingDimensions = embeddingDimensions;
-
-            string? topK = section["TopK"];
-            if (int.TryParse(topK, out int topKValue) && topKValue > 0)
-                options.TopK = topKValue;
-
-            string? ollamaEndpoint = section["OllamaEndpoint"];
-            if (!string.IsNullOrWhiteSpace(ollamaEndpoint))
-                options.OllamaEndpoint = ollamaEndpoint;
-
-            string? ollamaChat = section["OllamaChatModel"];
-            if (!string.IsNullOrWhiteSpace(ollamaChat))
-                options.OllamaChatModel = ollamaChat;
-
-            string? ollamaEmbed = section["OllamaEmbeddingModel"];
-            if (!string.IsNullOrWhiteSpace(ollamaEmbed))
-                options.OllamaEmbeddingModel = ollamaEmbed;
-
-            string? useSqlite = section["OllamaUseSqliteSearch"];
-            if (bool.TryParse(useSqlite, out bool ollamaUseSqlite))
-                options.OllamaUseSqliteSearch = ollamaUseSqlite;
-
-            string? useAzureSearch = section["UseAzureSearch"];
-            if (bool.TryParse(useAzureSearch, out bool azureSearch))
-                options.UseAzureSearch = azureSearch;
-        }
-
-        // Environment / secrets overrides for Ollama
-        string? envEndpoint = configuration[GKeys.OllamaEndpoint];
-        if (!string.IsNullOrWhiteSpace(envEndpoint))
-            options.OllamaEndpoint = envEndpoint;
-
-        string? envChat = configuration[GKeys.OllamaChatModel];
-        if (!string.IsNullOrWhiteSpace(envChat))
-            options.OllamaChatModel = envChat;
-
-        string? envEmbed = configuration[GKeys.OllamaEmbeddingModel];
-        if (!string.IsNullOrWhiteSpace(envEmbed))
-            options.OllamaEmbeddingModel = envEmbed;
+        options.SubFolder = "ConsoleDemo";
     });
 }
 

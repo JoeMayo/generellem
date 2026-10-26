@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Generellem.Services;
 
-using IHttpClientFactory = Generellem.Services.IHttpClientFactory;
+using Microsoft.Extensions.Logging;
 
 namespace Generellem.DocumentSource;
 
@@ -11,7 +11,7 @@ namespace Generellem.DocumentSource;
 /// <param name="logger">For writing to a log file.</param>
 /// <param name="pathProviderFactory">Generates a new <see cref="IPathProvider"/>.</param>
 public class EnterpriseDocumentSourceFactory(
-    IHttpClientFactory httpFact, 
+    IGenerellemHttpClientFactory httpFact, 
     ILogger<Website> logger,
     IPathProviderFactory pathProviderFactory) 
     : IDocumentSourceFactory
