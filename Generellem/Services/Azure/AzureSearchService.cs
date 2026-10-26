@@ -5,19 +5,27 @@ using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes;
 using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
+using Generellem.DependencyInjection;
 using Generellem.Embedding;
 using Generellem.Services.Exceptions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using Polly;
 using Polly.Retry;
 
 namespace Generellem.Services.Azure;
 
-public class AzureSearchService(IDynamicConfiguration config, ILogger<AzureSearchService> logger) : ISearchService
+public class AzureSearchService(
+    IDynamicConfiguration config,
+    ILogger<AzureSearchService> logger,
+    IOptions<GenerellemOptions>? options = null) : ISearchService
 {
-    const int VectorSearchDimensions = 1536; // defined by text-embedding-ada-002
+    readonly int vectorSearchDimensions = options?.Value.EmbeddingDimensions > 0
+        ? options.Value.EmbeddingDimensions
+        : 1536;
+
     const string VectorAlgorithmConfigName = "hnsw-config";
     const string VectorProfileName = "generellem-vector-profile";
 
@@ -57,7 +65,7 @@ public class AzureSearchService(IDynamicConfiguration config, ILogger<AzureSearc
                 new SimpleField(nameof(TextChunk.ID), SearchFieldDataType.String) { IsKey = true, IsFilterable = true, IsSortable = true, IsFacetable = true },
                 new SearchableField(nameof(TextChunk.DocumentReference)) { IsFilterable = true, IsSortable = true, IsFacetable = true },
                 new SearchableField(nameof(TextChunk.Content)) { IsFilterable = true },
-                new VectorSearchField(nameof(TextChunk.Embedding), VectorSearchDimensions, VectorProfileName)
+                new VectorSearchField(nameof(TextChunk.Embedding), vectorSearchDimensions, VectorProfileName)
             },
             VectorSearch = new()
             {

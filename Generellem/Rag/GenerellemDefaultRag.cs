@@ -64,8 +64,9 @@ public class GenerellemDefaultRag(
     {
         AzureOpenAIChatRequest request = new();
 
-        string? deploymentName = config[GKeys.AzOpenAIDeploymentName];
-        ArgumentException.ThrowIfNullOrWhiteSpace(deploymentName, nameof(deploymentName));
+        // Azure requires a real deployment name; local profiles use a placeholder when unset/blank.
+        string? configuredDeployment = config[GKeys.AzOpenAIDeploymentName];
+        string deploymentName = string.IsNullOrWhiteSpace(configuredDeployment) ? "local" : configuredDeployment;
 
         request.SummarizedUserIntent = await SummarizeUserIntentAsync(queryText, chatHistory, deploymentName, cancelToken);
         string summarizedIntentMessage = request.SummarizedUserIntent.Response?.Text ?? string.Empty;

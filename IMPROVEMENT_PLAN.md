@@ -135,16 +135,16 @@ Keep current `AzureOpenAILlm`, `AzureOpenAIEmbedding`, `QdrantService` / `AzureS
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **2.1** | Define `GenerellemProfile` enum and `AddGenerellem(profile)` extension | One DI call replaces 15-line manual registration in demos |
-| **2.2** | Implement `InMemorySearchService` | Implements `ISearchService`; stores/searches chunks in memory; unit tests pass |
-| **2.3** | Implement `DeterministicEmbeddingService` | Implements `IEmbedding`; produces consistent vectors without API calls; unit tests pass |
-| **2.4** | Implement `LocalLlmService` (InMemory profile) | Implements `ILlm`; answers using retrieved context without external API; demo runs end-to-end |
-| **2.5** | Make embedding dimensions configurable | `GenerellemOptions.EmbeddingDimensions` replaces hardcoded `1536` in search services |
-| **2.6** | Implement `SqliteSearchService` (brute-force dev search) | Vectors persisted in SQLite alongside hashes; survives restart; unit tests pass |
-| **2.7** | Add `appsettings.Local.json` + `--profile` CLI flag | `GenerellemConsole` defaults to `InMemory` in Debug; documents all profiles |
-| **2.8** | Quick Start section in README | New developer follows 3-step guide and gets answers in < 5 minutes |
-| **2.9** | Implement `OllamaLlm` + `OllamaEmbedding` | Real local AI with configurable model names; works with InMemory or Sqlite search |
-| **2.10** | Optional `docker-compose.yml` | Qdrant + Ollama available for developers who want server-based local stack |
+| **2.1** | Define `GenerellemProfile` enum and `AddGenerellem(profile)` extension | ✅ Done — `GenerellemProfile` + `AddGenerellem` in `DependencyInjection/` |
+| **2.2** | Implement `InMemorySearchService` | ✅ Done — singleton in-memory cosine search + unit tests |
+| **2.3** | Implement `DeterministicEmbeddingService` | ✅ Done — hash-based embeddings + unit tests |
+| **2.4** | Implement `LocalLlmService` (InMemory profile) | ✅ Done — extractive answers from retrieved context + unit tests |
+| **2.5** | Make embedding dimensions configurable | ✅ Done — `GenerellemOptions.EmbeddingDimensions` used by Qdrant/Azure Search |
+| **2.6** | Implement `SqliteSearchService` (brute-force dev search) | ✅ Done — `VectorChunks` table + EF migration + unit tests |
+| **2.7** | Add `appsettings.Local.json` + `--profile` CLI flag | ✅ Done — console defaults to InMemory; all profiles documented in banner |
+| **2.8** | Quick Start section in README | ✅ Done — 3-step clone-and-run guide |
+| **2.9** | Implement `OllamaLlm` + `OllamaEmbedding` | ✅ Done — Ollama HTTP API; InMemory or Sqlite search via options |
+| **2.10** | Optional `docker-compose.yml` | ✅ Done — Qdrant + Ollama services |
 
 **Estimated effort:** ~4–6 sessions (2.1–2.8 deliver the core "clone and run" experience; 2.9–2.10 are stretch)
 
@@ -284,8 +284,8 @@ dotnet run -- --profile Azure
 | Phase | Status | Notes |
 |-------|--------|-------|
 | 1 — Quick wins | Complete | |
-| 2 — Easy local dev | Not started | **Next priority** |
-| 3 — DX & config | Not started | |
+| 2 — Easy local dev | Complete | Profiles: InMemory, Sqlite, Ollama, Azure |
+| 3 — DX & config | Not started | **Next priority** |
 | 4 — Search parity | Not started | |
 | 5 — RAG quality | Not started | |
 | 6 — Performance | Not started | |
@@ -297,7 +297,6 @@ dotnet run -- --profile Azure
 ## Recommended starting order
 
 1. ~~Phase 1~~ — Complete
-2. **Phase 2, Steps 2.1–2.4** — `InMemory` profile (zero-setup clone and run)
-3. **Phase 2, Steps 2.5–2.8** — Configurable dimensions, Sqlite vectors, README quick start
-4. **Phase 2, Steps 2.9–2.10** — Ollama + Docker (optional local AI)
-5. Continue with Phase 3+
+2. ~~Phase 2~~ — Complete (clone-and-run + Ollama/Docker)
+3. **Phase 3** — DX & configuration polish
+4. Continue with Phase 4+

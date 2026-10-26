@@ -1,9 +1,11 @@
-﻿using Generellem.DocumentSource;
+using Generellem.DependencyInjection;
+using Generellem.DocumentSource;
 using Generellem.Processors;
 using Generellem.Services;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenAI.Chat;
 
@@ -16,9 +18,10 @@ internal class GenerellemHostedService(
     IDocumentSourceFactory docSourceFact,
     IGenerellemFiles gemFiles,
     IGenerellemIngestion generellemIngestion,
-    IGenerellemQuery generellemQuery, 
+    IGenerellemQuery generellemQuery,
     IHostApplicationLifetime lifetime,
-    ILogger<GenerellemHostedService> logger)
+    ILogger<GenerellemHostedService> logger,
+    IOptions<GenerellemOptions> generellemOptions)
     : IHostedService
 {
     /// <summary>
@@ -32,8 +35,8 @@ internal class GenerellemHostedService(
             Progress<IngestionProgress> progress = new(
                 ingestionProgress =>
                 {
-                    string message = 
-                        ingestionProgress.CurrentCount > 0 ? 
+                    string message =
+                        ingestionProgress.CurrentCount > 0 ?
                             $"[{ingestionProgress.CurrentCount}] {ingestionProgress.Message}" :
                             ingestionProgress.Message;
 
@@ -46,7 +49,7 @@ internal class GenerellemHostedService(
             // runs on a periodic timer to grab the latest files.
             await generellemIngestion.IngestDocumentsAsync(progress, cancelToken);
 
-            PrintBanner();
+            PrintBanner(generellemOptions.Value);
 
             await RunMainLoopAsync(cancelToken);
         }
@@ -58,22 +61,21 @@ internal class GenerellemHostedService(
         {
             lifetime.StopApplication();
 
-            do
+            // If the user runs outside of visual studio
+            // the application runs and stops before they
+            // can see output. Skip when stdin is redirected (CI/scripts).
+            if (!Console.IsInputRedirected)
             {
-                // If the user runs outside of visual studio
-                // the application runs and stops before they
-                // can see output. Although this causes a second
-                // keypress of Visual studio, it still helps when
-                // used on the Windows command line, another
-                // platform like Linux or MacOS, or when using an
-                // editor that doesn't stop the temp command window.
-                Console.WriteLine("\nPress Enter to stop...\n");
-                ConsoleKeyInfo keyInfo = Console.ReadKey();
+                do
+                {
+                    Console.WriteLine("\nPress Enter to stop...\n");
+                    ConsoleKeyInfo keyInfo = Console.ReadKey();
 
-                if (keyInfo.Key == ConsoleKey.Enter)
-                    break;
+                    if (keyInfo.Key == ConsoleKey.Enter)
+                        break;
 
-            } while (true);
+                } while (true);
+            }
         }
     }
 
@@ -110,14 +112,27 @@ internal class GenerellemHostedService(
         } while (!stopWords.Contains(userInput));
     }
 
-    static void PrintBanner()
+    static void PrintBanner(GenerellemOptions options)
     {
         const ConsoleColor bannerColor = ConsoleColor.Magenta;
         const ConsoleColor messageColor = ConsoleColor.Cyan;
+        const ConsoleColor warnColor = ConsoleColor.Yellow;
 
         PrintColoredText("*-----------------------------------------*", bannerColor);
         PrintColoredText("* Welcome to the Generellem Console Demo! *", bannerColor);
         PrintColoredText("*-----------------------------------------*", bannerColor);
+
+        Console.ForegroundColor = messageColor;
+        Console.WriteLine();
+        Console.WriteLine($"Profile: {options.Profile}");
+        Console.ResetColor();
+
+        if (options.Profile is GenerellemProfile.InMemory or GenerellemProfile.Sqlite)
+        {
+            Console.ForegroundColor = warnColor;
+            Console.WriteLine($"{options.Profile} profile — for local demo only (no cloud AI).");
+            Console.ResetColor();
+        }
 
         Console.ForegroundColor = messageColor;
         Console.WriteLine(@"
@@ -131,13 +146,13 @@ folder has Markdown files, like CONTRIBUTING.md. Also, the Documents folder
 has a growing list of content, covering supported scenarios. For testing, 
 you can browse those documents and form questions based on their content.
 
-We'll add more content as time goes by, which will help to more clearly 
-demonstrate how Generellem works.
+Profiles:
+  --profile InMemory  (default) zero setup, extractive answers
+  --profile Sqlite    vectors persisted in SQLite
+  --profile Ollama    real local AI (requires Ollama)
+  --profile Azure     Azure OpenAI + Qdrant (requires secrets)
 
-Remember to follow instructions on the Getting Started page to configure
-services properly:
-
-https://github.com/JoeMayo/generellem/wiki/Getting-Started
+Docs: https://github.com/JoeMayo/generellem/wiki/Getting-Started
 
 Let's get started!");
         Console.ResetColor();
@@ -176,7 +191,7 @@ Let's get started!");
         foreach (IDocumentSource docSource in docSources)
         {
             string configFileName = $"{docSource.GetType().Name}.json";
-            
+
             if (File.Exists(configFileName))
                 File.Copy(configFileName, Path.Combine(appDataPath, configFileName), overwrite: true);
         }
