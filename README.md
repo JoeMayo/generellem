@@ -33,7 +33,7 @@ Type `quit` to exit.
 | **InMemory** (default) | `dotnet run` | None — extractive answers from local docs |
 | **Sqlite** | `dotnet run -- --profile Sqlite` | None — vectors persist in SQLite |
 | **Ollama** | `dotnet run -- --profile Ollama` | [Ollama](https://ollama.com) + `ollama pull llama3.2` + `ollama pull nomic-embed-text` |
-| **Azure** | `dotnet run -- --profile Azure` | Azure OpenAI + Qdrant keys (user secrets) |
+| **Azure** | `dotnet run -- --profile Azure` | Azure OpenAI + Qdrant keys (user secrets). Set `Generellem:UseAzureSearch` to `true` to use Azure AI Search instead |
 
 Optional Docker helpers for Qdrant/Ollama:
 

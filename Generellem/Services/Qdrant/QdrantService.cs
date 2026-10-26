@@ -32,6 +32,18 @@ public class QdrantService(
     const string SourceReference = "SourceReference";
     const string TenantID = "TenantID";
 
+    /// <summary>
+    /// Payload fields indexed for filtering. Azure AI Search indexes the same names.
+    /// </summary>
+    public static IReadOnlyList<string> FilterPayloadFields { get; } =
+    [
+        TenantID,
+        GroupID,
+        SourceReference,
+        Pathname,
+        DocumentReference
+    ];
+
     string? QdrantApiKey => config[GKeys.QdrantApiKey];
     string? QdrantEndpoint => config[GKeys.QdrantEndpoint]; //"http://localhost:6334";
     string? QdrantCollection => config[GKeys.QdrantCollection];
@@ -74,21 +86,24 @@ public class QdrantService(
                         hnswConfig: new HnswConfigDiff { PayloadM = 16, M = 0 }),
                 cancelToken);
 
-            await client.CreatePayloadIndexAsync(
-                collectionName: QdrantCollection,
-                fieldName: TenantID,
-                schemaType: PayloadSchemaType.Keyword,
-                indexParams: new PayloadIndexParams
-                {
-                    KeywordIndexParams = new KeywordIndexParams
+            foreach (string field in FilterPayloadFields)
+            {
+                PayloadIndexParams? indexParams = field == TenantID
+                    ? new PayloadIndexParams
                     {
-                        IsTenant = true
+                        KeywordIndexParams = new KeywordIndexParams
+                        {
+                            IsTenant = true
+                        }
                     }
-                });
-            await client.CreatePayloadIndexAsync(
-                collectionName: QdrantCollection,
-                fieldName: GroupID,
-                schemaType: PayloadSchemaType.Keyword);
+                    : null;
+
+                await client.CreatePayloadIndexAsync(
+                    collectionName: QdrantCollection,
+                    fieldName: field,
+                    schemaType: PayloadSchemaType.Keyword,
+                    indexParams: indexParams);
+            }
         }
         catch (RpcException rpcEx)
         {
@@ -253,7 +268,7 @@ public class QdrantService(
         }
     }
 
-    public async Task<List<TextChunk>> GetDocumentReferencesAsync(string docSourcePrefix, CancellationToken cancellationToken)
+    public virtual async Task<List<TextChunk>> GetDocumentReferencesAsync(string docSourcePrefix, CancellationToken cancellationToken)
     {
         if (!await DoesIndexExistAsync(cancellationToken))
             return new();
@@ -525,8 +540,6 @@ public class QdrantService(
         }
     }
 
-    public Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
+    public virtual Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken) =>
+        GetDocumentReferencesAsync(sourceReference, cancellationToken);
 }

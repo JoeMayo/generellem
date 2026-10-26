@@ -134,6 +134,15 @@ internal class GenerellemHostedService(
             Console.ResetColor();
         }
 
+        if (options.Profile == GenerellemProfile.Azure)
+        {
+            Console.ForegroundColor = messageColor;
+            Console.WriteLine(options.UseAzureSearch
+                ? "Search backend: Azure AI Search."
+                : "Search backend: Qdrant. Set Generellem:UseAzureSearch to true to switch.");
+            Console.ResetColor();
+        }
+
         Console.ForegroundColor = messageColor;
         Console.WriteLine(@"
 This Console app lets you try out Generellem to see how it works. You can
@@ -150,7 +159,7 @@ Profiles:
   --profile InMemory  (default) zero setup, extractive answers
   --profile Sqlite    vectors persisted in SQLite
   --profile Ollama    real local AI (requires Ollama)
-  --profile Azure     Azure OpenAI + Qdrant (requires secrets)
+  --profile Azure     Azure OpenAI + Qdrant, or Azure AI Search when UseAzureSearch is true
 
 Docs: https://github.com/JoeMayo/generellem/wiki/Getting-Started
 

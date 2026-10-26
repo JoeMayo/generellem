@@ -2,6 +2,14 @@
 
 namespace Generellem.Services;
 
+/// <summary>
+/// Vector index used by ingestion and query.
+/// </summary>
+/// <remarks>
+/// InMemory, Sqlite, Qdrant, and Azure AI Search each implement every method.
+/// The interface stays in one piece so a backend can be swapped through DI
+/// without callers catching <see cref="NotImplementedException"/>.
+/// </remarks>
 public interface ISearchService
 {
     Task CreateIndexAsync(CancellationToken cancelToken);
