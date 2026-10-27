@@ -35,6 +35,9 @@ public class GenerellemStartupValidator(
         if (opts.EmbeddingDimensions <= 0)
             errors.Add($"{nameof(GenerellemOptions.EmbeddingDimensions)} must be greater than 0.");
 
+        if (opts.EmbeddingBatchSize <= 0)
+            errors.Add($"{nameof(GenerellemOptions.EmbeddingBatchSize)} must be greater than 0.");
+
         if (opts.Profile == GenerellemProfile.Ollama)
         {
             if (string.IsNullOrWhiteSpace(opts.OllamaEndpoint))

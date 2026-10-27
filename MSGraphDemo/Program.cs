@@ -81,6 +81,17 @@ void ConfigureServices(IServiceCollection services, GenerellemProfile selectedPr
         options.SubFolder = "MSGraphDemo";
         if (selectedProfile == GenerellemProfile.Azure)
             options.UseAzureSearch = true;
+
+        if (!GenerellemRunModeParser.TryReadArgs(args, out GenerellemRunMode runMode, out bool parsed))
+            return;
+
+        if (!parsed)
+        {
+            Console.WriteLine("Unknown --mode value. Use Both, Ingest, or Query.");
+            Console.WriteLine("Falling back to Both.");
+        }
+
+        options.RunMode = runMode;
     });
 }
 

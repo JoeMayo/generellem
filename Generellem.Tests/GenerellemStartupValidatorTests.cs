@@ -63,6 +63,21 @@ public class GenerellemStartupValidatorTests
     }
 
     [Fact]
+    public async Task StartAsync_InvalidEmbeddingBatchSize_Throws()
+    {
+        GenerellemOptions options = new()
+        {
+            Profile = GenerellemProfile.InMemory,
+            EmbeddingBatchSize = 0
+        };
+        GenerellemStartupValidator validator = Create(options);
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(() => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(GenerellemOptions.EmbeddingBatchSize), ex.Message);
+    }
+
+    [Fact]
     public async Task StartAsync_AzureWithoutKeys_NamesEveryRequiredKey()
     {
         GenerellemStartupValidator validator = Create(new GenerellemOptions { Profile = GenerellemProfile.Azure });

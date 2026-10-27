@@ -69,7 +69,22 @@ void ConfigureServices(IServiceCollection services, GenerellemProfile selectedPr
     services.AddGenerellem(selectedProfile, options =>
     {
         options.SubFolder = "ConsoleDemo";
+        ApplyRunMode(args, options);
     });
+}
+
+static void ApplyRunMode(string[] args, GenerellemOptions options)
+{
+    if (!GenerellemRunModeParser.TryReadArgs(args, out GenerellemRunMode runMode, out bool parsed))
+        return;
+
+    if (!parsed)
+    {
+        Console.WriteLine("Unknown --mode value. Use Both, Ingest, or Query.");
+        Console.WriteLine("Falling back to Both.");
+    }
+
+    options.RunMode = runMode;
 }
 
 static GenerellemProfile ParseProfile(string[] args)

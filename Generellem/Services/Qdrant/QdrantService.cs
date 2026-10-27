@@ -18,7 +18,8 @@ namespace Generellem.Services.Qdrant;
 public class QdrantService(
     IDynamicConfiguration config,
     ILogger<QdrantService> logger,
-    IOptions<GenerellemOptions>? options = null) : ISearchService
+    IOptions<GenerellemOptions>? options = null,
+    QdrantClient? qdrantClient = null) : ISearchService
 {
     readonly int vectorSearchDimensions = options?.Value.EmbeddingDimensions > 0
         ? options.Value.EmbeddingDimensions
@@ -55,7 +56,23 @@ public class QdrantService(
     string? QdrantEndpoint => config[GKeys.QdrantEndpoint]; //"http://localhost:6334";
     string? QdrantCollection => config[GKeys.QdrantCollection];
 
-    bool collectionExists = false;
+    readonly QdrantClient? sharedClient = qdrantClient;
+
+    CollectionExistenceCache existenceCache = new(TimeProvider.System, CollectionExistenceCache.DefaultTtl);
+
+    QdrantClient Client => sharedClient ?? throw new InvalidOperationException(
+        "QdrantClient is not registered. AddGenerellem(GenerellemProfile.Azure) registers a shared client.");
+
+    /// <summary>
+    /// Replaces the existence cache. Tests use this to control the clock and TTL.
+    /// </summary>
+    protected void UseCollectionCache(TimeProvider time, TimeSpan ttl) =>
+        existenceCache = new CollectionExistenceCache(time, ttl);
+
+    /// <summary>
+    /// Drops a cached "collection exists" answer so the next check asks Qdrant.
+    /// </summary>
+    protected void InvalidateCollectionCache() => existenceCache.Invalidate();
 
     readonly ResiliencePipeline pipeline =
         new ResiliencePipelineBuilder()
@@ -73,8 +90,14 @@ public class QdrantService(
 
     public virtual async Task CreateIndexAsync(CancellationToken cancelToken)
     {
-        if (await DoesIndexExistAsync(cancelToken))
+        // Ask Qdrant directly. A cached "exists" must not skip recreation after an external delete.
+        if (await CollectionExistsOnServerAsync(cancelToken))
+        {
+            existenceCache.RememberExists();
             return;
+        }
+
+        existenceCache.Invalidate();
 
         ArgumentException.ThrowIfNullOrWhiteSpace(QdrantApiKey, nameof(QdrantApiKey));
         ArgumentException.ThrowIfNullOrWhiteSpace(QdrantEndpoint, nameof(QdrantEndpoint));
@@ -82,8 +105,8 @@ public class QdrantService(
 
         try
         {
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
+            // Resolve before the retry pipeline so a missing client fails immediately.
+            QdrantClient client = Client;
 
             await pipeline.ExecuteAsync(
                 async token =>
@@ -111,9 +134,14 @@ public class QdrantService(
                     schemaType: PayloadSchemaType.Keyword,
                     indexParams: indexParams);
             }
+
+            existenceCache.RememberExists();
         }
         catch (RpcException rpcEx)
         {
+            if (rpcEx.StatusCode == StatusCode.NotFound)
+                InvalidateCollectionCache();
+
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rpcEx, "Please check credentials and exception details for more info.");
             throw;
         }
@@ -121,29 +149,37 @@ public class QdrantService(
 
     public async Task<bool> DoesIndexExistAsync(CancellationToken cancellationToken)
     {
+        if (existenceCache.TryGetExists())
+            return true;
+
+        if (!await CollectionExistsOnServerAsync(cancellationToken))
+            return false;
+
+        existenceCache.RememberExists();
+        return true;
+    }
+
+    /// <summary>
+    /// Asks Qdrant whether the collection exists. Does not read the cache.
+    /// NotFound and Unimplemented mean the collection is missing.
+    /// </summary>
+    protected virtual async Task<bool> CollectionExistsOnServerAsync(CancellationToken cancellationToken)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(QdrantApiKey, nameof(QdrantApiKey));
         ArgumentException.ThrowIfNullOrWhiteSpace(QdrantEndpoint, nameof(QdrantEndpoint));
         ArgumentException.ThrowIfNullOrWhiteSpace(QdrantCollection, nameof(QdrantCollection));
 
         try
         {
-            if (collectionExists)
-                return true;
-
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
-            collectionExists = 
-                await pipeline.ExecuteAsync(async _ => 
-                    await client.CollectionExistsAsync(QdrantCollection), cancellationToken);
+            return await pipeline.ExecuteAsync(
+                async token => await Client.CollectionExistsAsync(QdrantCollection, token),
+                cancellationToken);
         }
         catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound || rpcEx.StatusCode == StatusCode.Unimplemented)
         {
-            // 404 indicates the index does not exist
-            collectionExists = false;
+            InvalidateCollectionCache();
+            return false;
         }
-
-        return collectionExists;
     }
 
     public async Task DeleteAllAsync(int companyId, CancellationToken cancellationToken)
@@ -165,17 +201,15 @@ public class QdrantService(
 
         try
         {
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             UpdateResult result =
                 await pipeline.ExecuteAsync(
-                    async token => await client.DeleteAsync(QdrantCollection, filter),
+                    async token => await Client.DeleteAsync(QdrantCollection, filter),
                     cancellationToken);
         }
         catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound)
         {
-            // 404 indicates the index does not exist
+            // 404 indicates the index does not exist. Drop the cache so the next check sees that.
+            InvalidateCollectionCache();
         }
     }
 
@@ -188,17 +222,15 @@ public class QdrantService(
         IReadOnlyList<Guid> ids = idsToDelete.Select(id => Guid.Parse(id)).ToList();
         try
         {
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             UpdateResult result =
                 await pipeline.ExecuteAsync(
-                    async token => await client.DeleteAsync(QdrantCollection, ids),
+                    async token => await Client.DeleteAsync(QdrantCollection, ids),
                     cancellationToken);
         }
         catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound)
         {
-            // 404 indicates the index does not exist
+            // 404 indicates the index does not exist. Drop the cache so the next check sees that.
+            InvalidateCollectionCache();
         }
     }
 
@@ -217,9 +249,6 @@ public class QdrantService(
 
         try
         {
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             Filter filter = new()
             {
                 Must =
@@ -250,7 +279,7 @@ public class QdrantService(
 
             IReadOnlyList<ScoredPoint> queryResult =
                 await pipeline.ExecuteAsync(
-                    async token => await client.QueryAsync(
+                    async token => await Client.QueryAsync(
                         collectionName: QdrantCollection,
                         filter: filter,
                         payloadSelector: true,
@@ -270,6 +299,9 @@ public class QdrantService(
         }
         catch (RpcException rpcEx)
         {
+            if (rpcEx.StatusCode == StatusCode.NotFound)
+                InvalidateCollectionCache();
+
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rpcEx, "Please check credentials and exception details for more info.");
             throw;
         }
@@ -289,9 +321,6 @@ public class QdrantService(
 
         try
         {
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             Filter filter = new()
             {
                 Must =
@@ -331,7 +360,7 @@ public class QdrantService(
 
                 IReadOnlyList<ScoredPoint> queryResult =
                     await pipeline.ExecuteAsync(
-                        async token => await client.QueryAsync(
+                        async token => await Client.QueryAsync(
                             collectionName: QdrantCollection,
                             filter: filter,
                             limit: limit,
@@ -364,6 +393,9 @@ public class QdrantService(
         }
         catch (RpcException rpcEx)
         {
+            if (rpcEx.StatusCode == StatusCode.NotFound)
+                InvalidateCollectionCache();
+
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rpcEx, "Please check credentials and exception details for more info.");
             throw;
         }
@@ -383,9 +415,6 @@ public class QdrantService(
 
         try
         {
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             Filter filter = new()
             {
                 Must =
@@ -416,7 +445,7 @@ public class QdrantService(
 
             IReadOnlyList<ScoredPoint> queryResult =
                 await pipeline.ExecuteAsync(
-                    async token => await client.QueryAsync(
+                    async token => await Client.QueryAsync(
                         collectionName: QdrantCollection,
                         filter: filter,
                         payloadSelector: true,
@@ -436,6 +465,9 @@ public class QdrantService(
         }
         catch (RpcException rpcEx)
         {
+            if (rpcEx.StatusCode == StatusCode.NotFound)
+                InvalidateCollectionCache();
+
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rpcEx, "Please check credentials and exception details for more info.");
             throw;
         }
@@ -471,15 +503,15 @@ public class QdrantService(
                  })
                 .ToList();
 
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             await pipeline.ExecuteAsync(
-                async token => await client.UpsertAsync(QdrantCollection, points),
+                async token => await Client.UpsertAsync(QdrantCollection, points),
                 cancelToken);
         }
         catch (RpcException rpcEx)
         {
+            if (rpcEx.StatusCode == StatusCode.NotFound)
+                InvalidateCollectionCache();
+
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rpcEx, "Please check credentials and exception details for more info.");
             throw;
         }
@@ -511,13 +543,10 @@ public class QdrantService(
                 }
             };
 
-            Uri endpoint = new(QdrantEndpoint);
-            QdrantClient client = new(endpoint.Host, apiKey: QdrantApiKey, https: QdrantEndpoint.StartsWith("https"));
-
             IReadOnlyList<ScoredPoint> queryResult = await pipeline.ExecuteAsync(
                 async token =>
                 {
-                    return await client.SearchAsync(
+                    return await Client.SearchAsync(
                         collectionName: QdrantCollection,
                         filter: filter,
                         vector: embedding.ToArray(),
@@ -539,6 +568,7 @@ public class QdrantService(
         }
         catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound)
         {
+            InvalidateCollectionCache();
             throw new GenerellemNeedsIngestionException(
                 "You need to perform ingestion before querying so that there are documents available for context.",
                 rpcEx);
