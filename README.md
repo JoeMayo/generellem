@@ -41,7 +41,7 @@ Optional Docker helpers for Qdrant/Ollama:
 docker compose up -d
 ```
 
-Configure local options in `GenerellemConsole/appsettings.Local.json` (chunk size, overlap, TopK, temperature, Ollama models).
+Configure local options in `GenerellemConsole/appsettings.Local.json` (chunk size, overlap, TopK, temperature, `SummarizeUserIntent`, Ollama models).
 
 #### Getting Started
 

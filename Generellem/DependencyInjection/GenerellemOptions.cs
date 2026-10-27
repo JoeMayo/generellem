@@ -34,6 +34,12 @@ public class GenerellemOptions
     public int TopK { get; set; } = 3;
 
     /// <summary>
+    /// When true, an extra LLM call rewrites the user query from chat history before retrieval.
+    /// Set false to search with the raw query and skip that call. Defaults to true.
+    /// </summary>
+    public bool SummarizeUserIntent { get; set; } = true;
+
+    /// <summary>
     /// LLM temperature. The useful range depends on the model.
     /// </summary>
     public float Temperature { get; set; }

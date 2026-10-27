@@ -24,6 +24,13 @@ public class QdrantService(
         ? options.Value.EmbeddingDimensions
         : 1536;
 
+    /// <summary>
+    /// Neighbors requested per query. Read from <see cref="GenerellemOptions.TopK"/>.
+    /// </summary>
+    public int VectorSearchLimit { get; } = options?.Value.TopK > 0
+        ? options.Value.TopK
+        : 3;
+
     const string DocumentReference = "DocumentReference";
     const string ID = "ID";
     const string Content = "Content";
@@ -487,8 +494,6 @@ public class QdrantService(
         string qdrantTenantID = config[GKeys.TenantID] ?? "0";
         string qdrantGroupID = config[GKeys.GroupID] ?? "0";
 
-        const int ResponseCountLimit = 3;
-
         try
         {
             Filter filter = new()
@@ -516,7 +521,7 @@ public class QdrantService(
                         collectionName: QdrantCollection,
                         filter: filter,
                         vector: embedding.ToArray(),
-                        limit: ResponseCountLimit);
+                        limit: (ulong)VectorSearchLimit);
                 },
                 cancelToken);
 

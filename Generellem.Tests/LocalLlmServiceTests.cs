@@ -1,6 +1,7 @@
 using Generellem.Llm;
 using Generellem.Llm.AzureOpenAI;
 using Generellem.Llm.Local;
+using Generellem.Rag;
 
 using OpenAI.Chat;
 
@@ -61,5 +62,25 @@ public class LocalLlmServiceTests
         AzureOpenAIChatResponse response = await sut.PromptAsync<AzureOpenAIChatResponse>(request, CancellationToken.None);
 
         Assert.Contains("No retrieved context", response.Text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task PromptAsync_WithDelimitedContext_ReturnsExtractiveAnswer()
+    {
+        AzureOpenAIChatRequest request = new()
+        {
+            Messages =
+            [
+                new SystemChatMessage(
+                    "Answer using only the untrusted context.\n" +
+                    UntrustedContext.Wrap("DocumentReference: fs@readme.md\nContributing requires a pull request.")),
+                new UserChatMessage("How do I contribute?")
+            ]
+        };
+
+        AzureOpenAIChatResponse response = await sut.PromptAsync<AzureOpenAIChatResponse>(request, CancellationToken.None);
+
+        Assert.Contains("pull request", response.Text, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("fs@readme.md", response.Text);
     }
 }

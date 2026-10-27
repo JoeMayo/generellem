@@ -111,27 +111,39 @@ public class AzureOpenAIEmbedTests
     }
 
     [Fact]
-    public async Task EmbedAsync_WithNoOverlap_BreaksTextInto2Chunks()
+    public async Task EmbedAsync_WithNoOverlap_SplitsOnWordBoundaries()
     {
         AzureOpenAIEmbedding sut = CreateSut(chunkSize: 9, overlap: 0);
 
         await sut.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         embeddingClientMock.Verify(
-            client => client.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+            client => client.GenerateEmbeddingAsync("Test ", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        embeddingClientMock.Verify(
+            client => client.GenerateEmbeddingAsync("document ", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        embeddingClientMock.Verify(
+            client => client.GenerateEmbeddingAsync("text", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
-    public async Task EmbedAsync_WithOverlap_BreaksTextInto3Chunks()
+    public async Task EmbedAsync_WithOverlap_KeepsTheNextWordWhole()
     {
         AzureOpenAIEmbedding sut = CreateSut(chunkSize: 9, overlap: 2);
 
         await sut.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         embeddingClientMock.Verify(
-            client => client.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(3));
+            client => client.GenerateEmbeddingAsync("Test ", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        embeddingClientMock.Verify(
+            client => client.GenerateEmbeddingAsync("document ", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        embeddingClientMock.Verify(
+            client => client.GenerateEmbeddingAsync("t text", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -142,10 +154,13 @@ public class AzureOpenAIEmbedTests
         await sut.EmbedAsync("Test document text", docTypeMock.Object, DefaultDocumentReference, progMock.Object, CancellationToken.None);
 
         embeddingClientMock.Verify(
-            client => client.GenerateEmbeddingAsync("Test docume", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            client => client.GenerateEmbeddingAsync("Test ", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
             Times.Once);
         embeddingClientMock.Verify(
-            client => client.GenerateEmbeddingAsync("ument text", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            client => client.GenerateEmbeddingAsync("document ", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        embeddingClientMock.Verify(
+            client => client.GenerateEmbeddingAsync("nt text", It.IsAny<EmbeddingGenerationOptions>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

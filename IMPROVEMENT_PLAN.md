@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phase 5 is next** — retrieval quality after the search backends match.
+- **Phase 6 is next** — performance after retrieval quality.
 
 ```mermaid
 flowchart LR
@@ -220,11 +220,11 @@ dotnet run -- --profile Azure
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **5.1** | Make retrieval parameters configurable | Embedding dimensions, top-K, chunk size/overlap read from `GenerellemOptions` |
-| **5.2** | Sentence/paragraph-aware chunking | `TextProcessor` splits on boundaries, not arbitrary character cuts; existing tests updated |
-| **5.3** | Source citations in responses | System prompt instructs model to cite `DocumentReference`; answer includes source paths/refs |
-| **5.4** | Make intent summarization optional | Config flag to skip the extra LLM call; default preserves current behavior |
-| **5.5** | Prompt injection hardening | Retrieved context wrapped in clear delimiters; system prompt treats context as untrusted |
+| **5.1** | Make retrieval parameters configurable | ✅ Done — chunk size and overlap come from options in `TextProcessor`. Embedding dimensions size deterministic embeddings, Qdrant, and Azure AI Search. Top-K now also limits Qdrant and Azure AI Search |
+| **5.2** | Sentence/paragraph-aware chunking | ✅ Done — `TextProcessor` packs paragraph and sentence boundaries, then words, and cuts characters only when a unit is longer than the chunk |
+| **5.3** | Source citations in responses | ✅ Done — the system prompt tells the model to cite `DocumentReference`, and `AskAsync` appends a Sources list |
+| **5.4** | Make intent summarization optional | ✅ Done — `Generellem:SummarizeUserIntent` defaults to true. Set it to false to search with the raw query and skip the extra LLM call |
+| **5.5** | Prompt injection hardening | ✅ Done — retrieved text is sanitized and wrapped in untrusted-context delimiters. The system prompt treats that block as data |
 
 **Estimated effort:** ~3 sessions  
 **Dependencies:** Phase 2–3
@@ -287,8 +287,8 @@ dotnet run -- --profile Azure
 | 2 — Easy local dev | Complete | Profiles: InMemory, Sqlite, Ollama, Azure |
 | 3 — DX & config | Complete | Options, startup validation, renamed HTTP client factory |
 | 4 — Search parity | Complete | Qdrant and Azure AI Search implement the full `ISearchService` contract |
-| 5 — RAG quality | Not started | **Next priority** |
-| 6 — Performance | Not started | |
+| 5 — RAG quality | Complete | Boundary chunking, citations, optional intent summary, untrusted context |
+| 6 — Performance | Not started | **Next priority** |
 | 7 — Hardening | Not started | |
 | 8 — Advanced | Backlog | |
 
@@ -300,4 +300,5 @@ dotnet run -- --profile Azure
 2. ~~Phase 2~~ — Complete (clone-and-run + Ollama/Docker)
 3. ~~Phase 3~~ — Complete (options, startup validation, HTTP client rename)
 4. ~~Phase 4~~ — Complete (Qdrant and Azure AI Search implement the same contract)
-5. **Phase 5** — RAG quality
+5. ~~Phase 5~~ — Complete (boundary chunking, citations, optional intent summary, untrusted context)
+6. **Phase 6** — Performance

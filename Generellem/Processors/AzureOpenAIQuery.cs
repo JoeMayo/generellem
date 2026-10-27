@@ -1,4 +1,7 @@
-﻿using Generellem.Llm;
+﻿using System.Text;
+
+using Generellem.Embedding;
+using Generellem.Llm;
 using Generellem.Llm.AzureOpenAI;
 using Generellem.Rag;
 
@@ -24,7 +27,50 @@ public class AzureOpenAIQuery(ILlm llm, IRag rag) : IGenerellemQuery
         QueryDetails<AzureOpenAIChatRequest, AzureOpenAIChatResponse> response = 
             await PromptAsync<AzureOpenAIChatRequest, AzureOpenAIChatResponse>(queryText, chatHistory, cancelToken);
 
-        return response.Response?.Text ?? string.Empty;
+        return WithSourceCitations(response.Response?.Text, response.Request?.TextChunks);
+    }
+
+    /// <summary>
+    /// Appends the distinct <see cref="TextChunk.DocumentReference"/> values used as context.
+    /// </summary>
+    internal static string WithSourceCitations(string? answer, IReadOnlyList<TextChunk>? chunks)
+    {
+        string text = answer ?? string.Empty;
+        if (chunks is null || chunks.Count == 0)
+            return text;
+
+        List<string> sources = [];
+        foreach (TextChunk chunk in chunks)
+        {
+            if (string.IsNullOrWhiteSpace(chunk.DocumentReference))
+                continue;
+
+            if (!sources.Contains(chunk.DocumentReference, StringComparer.Ordinal))
+                sources.Add(chunk.DocumentReference);
+        }
+
+        if (sources.Count == 0)
+            return text;
+
+        StringBuilder sb = new();
+        if (text.Length > 0)
+        {
+            sb.Append(text);
+            sb.AppendLine();
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("Sources:");
+        for (int i = 0; i < sources.Count; i++)
+        {
+            sb.Append("- ");
+            if (i == sources.Count - 1)
+                sb.Append(sources[i]);
+            else
+                sb.AppendLine(sources[i]);
+        }
+
+        return sb.ToString();
     }
 
     /// <summary>
