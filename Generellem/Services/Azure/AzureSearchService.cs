@@ -26,6 +26,13 @@ public class AzureSearchService(
         ? options.Value.EmbeddingDimensions
         : 1536;
 
+    /// <summary>
+    /// Neighbors requested per query. Read from <see cref="GenerellemOptions.TopK"/>.
+    /// </summary>
+    public int VectorSearchLimit { get; } = options?.Value.TopK > 0
+        ? options.Value.TopK
+        : 3;
+
     const string VectorAlgorithmConfigName = "hnsw-config";
     const string VectorProfileName = "generellem-vector-profile";
 
@@ -252,7 +259,7 @@ public class AzureSearchService(
         {
             VectorSearch = new()
             {
-                Queries = { new VectorizedQuery(embedding) { KNearestNeighborsCount = 3, Fields = { nameof(TextChunk.Embedding) } } }
+                Queries = { new VectorizedQuery(embedding) { KNearestNeighborsCount = VectorSearchLimit, Fields = { nameof(TextChunk.Embedding) } } }
             }
         };
 

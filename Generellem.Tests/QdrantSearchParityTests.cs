@@ -1,7 +1,9 @@
+using Generellem.DependencyInjection;
 using Generellem.Embedding;
 using Generellem.Services.Qdrant;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Generellem.Services.Tests;
 
@@ -26,6 +28,27 @@ public class QdrantSearchParityTests
 
         Assert.Equal("fs", sut.Source);
         Assert.Equal("q1", Assert.Single(result).ID);
+    }
+
+    [Fact]
+    public void VectorSearchLimit_UsesConfiguredTopK()
+    {
+        QdrantService sut = new(
+            Mock.Of<IDynamicConfiguration>(),
+            Mock.Of<ILogger<QdrantService>>(),
+            Options.Create(new GenerellemOptions { TopK = 11 }));
+
+        Assert.Equal(11, sut.VectorSearchLimit);
+    }
+
+    [Fact]
+    public void VectorSearchLimit_DefaultsToThree()
+    {
+        QdrantService sut = new(
+            Mock.Of<IDynamicConfiguration>(),
+            Mock.Of<ILogger<QdrantService>>());
+
+        Assert.Equal(3, sut.VectorSearchLimit);
     }
 
     sealed class RecordingQdrant : QdrantService

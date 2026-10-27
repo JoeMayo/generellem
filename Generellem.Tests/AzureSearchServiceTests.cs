@@ -1,6 +1,7 @@
 using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
 
+using Generellem.DependencyInjection;
 using Generellem.Embedding;
 using Generellem.Services.Azure;
 using Generellem.Services.Qdrant;
@@ -83,6 +84,27 @@ public class AzureSearchSchemaTests
 
 public class AzureSearchServiceTests
 {
+    [Fact]
+    public void VectorSearchLimit_UsesConfiguredTopK()
+    {
+        AzureSearchService sut = new(
+            Mock.Of<IDynamicConfiguration>(),
+            Mock.Of<ILogger<AzureSearchService>>(),
+            Options.Create(new GenerellemOptions { TopK = 9 }));
+
+        Assert.Equal(9, sut.VectorSearchLimit);
+    }
+
+    [Fact]
+    public void VectorSearchLimit_DefaultsToThree()
+    {
+        AzureSearchService sut = new(
+            Mock.Of<IDynamicConfiguration>(),
+            Mock.Of<ILogger<AzureSearchService>>());
+
+        Assert.Equal(3, sut.VectorSearchLimit);
+    }
+
     [Fact]
     public async Task SearchBySourceReferenceAsync_FiltersSourceTenantAndGroup()
     {

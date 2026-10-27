@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 
 using Generellem.Llm.AzureOpenAI;
+using Generellem.Rag;
 
 using OpenAI.Chat;
 
@@ -95,6 +96,17 @@ public partial class LocalLlmService : ILlm
 
     static string ExtractContext(string systemText)
     {
+        int delimited = systemText.IndexOf(UntrustedContext.Start, StringComparison.Ordinal);
+        if (delimited >= 0)
+        {
+            int contentStart = delimited + UntrustedContext.Start.Length;
+            int contentEnd = systemText.IndexOf(UntrustedContext.End, contentStart, StringComparison.Ordinal);
+            if (contentEnd < 0)
+                return systemText[contentStart..].Trim();
+
+            return systemText[contentStart..contentEnd].Trim();
+        }
+
         int contextMarker = systemText.IndexOf("Context:", StringComparison.OrdinalIgnoreCase);
         if (contextMarker < 0)
             return string.Empty;

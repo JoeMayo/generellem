@@ -156,6 +156,9 @@ public static class GenerellemServiceCollectionExtensions
         if (int.TryParse(section[nameof(GenerellemOptions.TopK)], out int topK))
             options.TopK = topK;
 
+        if (bool.TryParse(section[nameof(GenerellemOptions.SummarizeUserIntent)], out bool summarizeUserIntent))
+            options.SummarizeUserIntent = summarizeUserIntent;
+
         if (float.TryParse(
                 section[nameof(GenerellemOptions.Temperature)],
                 NumberStyles.Float,

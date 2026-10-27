@@ -34,6 +34,7 @@ public class AddGenerellemTests
         Assert.IsType<LocalLlmService>(sp.GetRequiredService<ILlm>());
         Assert.Equal(GenerellemProfile.InMemory, sp.GetRequiredService<IOptions<GenerellemOptions>>().Value.Profile);
         Assert.Equal(64, sp.GetRequiredService<IOptions<GenerellemOptions>>().Value.EmbeddingDimensions);
+        Assert.True(sp.GetRequiredService<IOptions<GenerellemOptions>>().Value.SummarizeUserIntent);
     }
 
     [Fact]
@@ -78,6 +79,7 @@ public class AddGenerellemTests
             ["Generellem:ChunkSize"] = "1200",
             ["Generellem:ChunkOverlap"] = "50",
             ["Generellem:TopK"] = "7",
+            ["Generellem:SummarizeUserIntent"] = "false",
             ["Generellem:Temperature"] = "0.4",
             ["Generellem:SubFolder"] = "FromJson",
             ["Generellem:OllamaChatModel"] = "from-json",
@@ -98,6 +100,7 @@ public class AddGenerellemTests
         Assert.Equal(1200, opts.ChunkSize);
         Assert.Equal(50, opts.ChunkOverlap);
         Assert.Equal(7, opts.TopK);
+        Assert.False(opts.SummarizeUserIntent);
         Assert.Equal(0.4f, opts.Temperature);
         Assert.Equal("ConsoleDemo", opts.SubFolder);
         Assert.Equal("from-env", opts.OllamaChatModel);
