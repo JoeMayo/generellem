@@ -40,6 +40,21 @@ public class GenerellemOptions
     public bool SummarizeUserIntent { get; set; } = true;
 
     /// <summary>
+    /// How many text chunks are sent in one embedding request during ingestion.
+    /// </summary>
+    public const int DefaultEmbeddingBatchSize = 16;
+
+    /// <summary>
+    /// How many text chunks are sent in one embedding request during ingestion.
+    /// </summary>
+    public int EmbeddingBatchSize { get; set; } = DefaultEmbeddingBatchSize;
+
+    /// <summary>
+    /// Console demo run: ingest, query, or both. The <c>--mode</c> flag overrides this.
+    /// </summary>
+    public GenerellemRunMode RunMode { get; set; } = GenerellemRunMode.Both;
+
+    /// <summary>
     /// LLM temperature. The useful range depends on the model.
     /// </summary>
     public float Temperature { get; set; }

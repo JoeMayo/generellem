@@ -43,15 +43,30 @@ internal class GenerellemHostedService(
                     logger.LogInformation(message);
                 });
 
-            CopyDocumentSources();
+            GenerellemRunMode runMode = generellemOptions.Value.RunMode;
 
-            // Normally, this would run in a separate service that
-            // runs on a periodic timer to grab the latest files.
-            await generellemIngestion.IngestDocumentsAsync(progress, cancelToken);
+            if (runMode != GenerellemRunMode.Query)
+            {
+                CopyDocumentSources();
 
-            PrintBanner(generellemOptions.Value);
+                // Normally, this would run in a separate service that
+                // runs on a periodic timer to grab the latest files.
+                await generellemIngestion.IngestDocumentsAsync(progress, cancelToken);
+            }
+            else
+            {
+                Console.WriteLine("Query mode: skipping ingestion.");
+            }
 
-            await RunMainLoopAsync(cancelToken);
+            if (runMode != GenerellemRunMode.Ingest)
+            {
+                PrintBanner(generellemOptions.Value);
+                await RunMainLoopAsync(cancelToken);
+            }
+            else
+            {
+                Console.WriteLine("Ingest mode: skipping questions.");
+            }
         }
         catch (OperationCanceledException opcEx)
         {
@@ -160,6 +175,13 @@ Profiles:
   --profile Sqlite    vectors persisted in SQLite
   --profile Ollama    real local AI (requires Ollama)
   --profile Azure     Azure OpenAI + Qdrant, or Azure AI Search when UseAzureSearch is true
+
+Modes:
+  --mode both     ingest, then ask questions (default)
+  --mode ingest   ingest documents and exit
+  --mode query    ask questions without ingesting
+
+Set Generellem:RunMode in appsettings.Local.json when you omit the flag.
 
 Docs: https://github.com/JoeMayo/generellem/wiki/Getting-Started
 

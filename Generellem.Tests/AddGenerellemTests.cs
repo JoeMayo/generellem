@@ -5,7 +5,10 @@ using Generellem.Llm;
 using Generellem.Llm.Local;
 using Generellem.Services;
 using Generellem.Services.InMemory;
+using Generellem.Services.Qdrant;
 using Generellem.Services.Sqlite;
+
+using Qdrant.Client;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -80,6 +83,8 @@ public class AddGenerellemTests
             ["Generellem:ChunkOverlap"] = "50",
             ["Generellem:TopK"] = "7",
             ["Generellem:SummarizeUserIntent"] = "false",
+            ["Generellem:EmbeddingBatchSize"] = "8",
+            ["Generellem:RunMode"] = "Query",
             ["Generellem:Temperature"] = "0.4",
             ["Generellem:SubFolder"] = "FromJson",
             ["Generellem:OllamaChatModel"] = "from-json",
@@ -101,6 +106,8 @@ public class AddGenerellemTests
         Assert.Equal(50, opts.ChunkOverlap);
         Assert.Equal(7, opts.TopK);
         Assert.False(opts.SummarizeUserIntent);
+        Assert.Equal(8, opts.EmbeddingBatchSize);
+        Assert.Equal(GenerellemRunMode.Query, opts.RunMode);
         Assert.Equal(0.4f, opts.Temperature);
         Assert.Equal("ConsoleDemo", opts.SubFolder);
         Assert.Equal("from-env", opts.OllamaChatModel);
@@ -118,6 +125,49 @@ public class AddGenerellemTests
 
         ServiceDescriptor firstHosted = services.First(descriptor => descriptor.ServiceType == typeof(IHostedService));
         Assert.Equal(typeof(GenerellemStartupValidator), firstHosted.ImplementationType);
+    }
+
+    [Fact]
+    public void AddGenerellem_InvalidRunMode_ThrowsWhenOptionsAreBuilt()
+    {
+        Dictionary<string, string?> values = new()
+        {
+            ["Generellem:RunMode"] = "sometimes"
+        };
+
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new MapConfiguration(values));
+        services.AddGenerellem(GenerellemProfile.InMemory);
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => _ = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value);
+
+        Assert.Contains("RunMode", ex.Message);
+    }
+
+    [Fact]
+    public void AddGenerellem_Azure_ReusesOneQdrantClient()
+    {
+        Dictionary<string, string?> values = new()
+        {
+            [GKeys.QdrantEndpoint] = "http://localhost:6334",
+            [GKeys.QdrantApiKey] = "test-key",
+            [GKeys.QdrantCollection] = "docs"
+        };
+
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new MapConfiguration(values));
+        services.AddGenerellem(GenerellemProfile.Azure);
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+
+        Assert.Same(sp.GetRequiredService<QdrantClient>(), sp.GetRequiredService<QdrantClient>());
+        Assert.Same(sp.GetRequiredService<QdrantService>(), sp.GetRequiredService<QdrantService>());
+        Assert.Same(sp.GetRequiredService<ISearchService>(), sp.GetRequiredService<QdrantService>());
     }
 
     sealed class MarkerHostedService : IHostedService

@@ -1,5 +1,6 @@
 ﻿using Azure;
 
+using Generellem.DependencyInjection;
 using Generellem.Document.DocumentTypes;
 using Generellem.Llm;
 using Generellem.Processors;
@@ -8,6 +9,7 @@ using Generellem.Services;
 using Generellem.Services.Exceptions;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenAI.Embeddings;
 
@@ -20,9 +22,14 @@ namespace Generellem.Embedding.AzureOpenAI;
 public class AzureOpenAIEmbedding(
     ILlmClientFactory llmClientFact, 
     ILogger<AzureOpenAIEmbedding> logger,
-    TextProcessor textProcessor)
+    TextProcessor textProcessor,
+    IOptions<GenerellemOptions>? options = null)
     : IEmbedding
 {
+    readonly int embeddingBatchSize = options?.Value.EmbeddingBatchSize > 0
+        ? options.Value.EmbeddingBatchSize
+        : GenerellemOptions.DefaultEmbeddingBatchSize;
+
     IProgress<IngestionProgress>? currentProgress;
     ResiliencePipeline? pipeline;
 
@@ -41,9 +48,14 @@ public class AzureOpenAIEmbedding(
                 UseJitter = true,  // Adds a random factor to the delay
                 MaxRetryAttempts = 10,
                 Delay = TimeSpan.FromSeconds(3),
+                DelayGenerator = args => new ValueTask<TimeSpan?>(
+                    EmbeddingRetryDelay.FromException(args.Outcome.Exception, args.AttemptNumber)),
                 OnRetry = args =>
                 {
-                    currentProgress?.Report(new("System busy, delaying a few seconds..."));
+                    string message = EmbeddingRetryDelay.FromException(args.Outcome.Exception, args.AttemptNumber) is null
+                        ? "System busy, delaying a few seconds..."
+                        : "Rate limit, delaying before the next embedding request...";
+                    currentProgress?.Report(new(message));
                     return default;
                 }
             })
@@ -65,28 +77,39 @@ public class AzureOpenAIEmbedding(
         try
         {
             List<TextChunk> chunks = textProcessor.BreakIntoChunks(fullText, documentReference);
-
-            int chunkCount = chunks.Count;
-            int count = 0;
-            string plural = chunkCount == 1 ? "" : "s";
-
-            EmbeddingClient embeddingClient = llmClientFact.CreateEmbeddingClient();
+            List<TextChunk> pending = [];
 
             foreach (TextChunk chunk in chunks)
             {
-                if (chunk.Content is null) continue;
+                if (chunk.Content is null)
+                    continue;
 
-                chunk.Order = ++count;
-                progress.Report(new($"Processing {chunk.Order} of {chunkCount} chunk{plural}"));
+                chunk.Order = pending.Count + 1;
+                pending.Add(chunk);
+            }
+
+            if (pending.Count == 0)
+                return chunks;
+
+            EmbeddingClient embeddingClient = llmClientFact.CreateEmbeddingClient();
+            int batchSize = Math.Max(1, embeddingBatchSize);
+
+            for (int offset = 0; offset < pending.Count; offset += batchSize)
+            {
+                int count = Math.Min(batchSize, pending.Count - offset);
+                TextChunk[] batch = pending.GetRange(offset, count).ToArray();
+                progress.Report(new($"Processing chunks {offset + 1}-{offset + count} of {pending.Count}"));
+
+                string[] inputs = batch.Select(chunk => chunk.Content!).ToArray();
 
                 try
                 {
-                    ClientResult<OpenAIEmbedding> embeddingResult = 
+                    ClientResult<OpenAIEmbeddingCollection> embeddingResult =
                         await Pipeline.ExecuteAsync(
-                            async _ => await embeddingClient.GenerateEmbeddingAsync(chunk.Content),
+                            async token => await embeddingClient.GenerateEmbeddingsAsync(inputs, cancellationToken: token),
                             cancellationToken);
 
-                    chunk.Embedding = embeddingResult.Value.ToFloats();
+                    AssignEmbeddings(batch, embeddingResult.Value);
                 }
                 catch (RequestFailedException rfEx)
                 {
@@ -113,5 +136,23 @@ public class AzureOpenAIEmbedding(
                 cancellationToken);
 
         return embeddingResult.Value.ToFloats();
+    }
+
+    static void AssignEmbeddings(TextChunk[] batch, OpenAIEmbeddingCollection embeddings)
+    {
+        if (embeddings.Count != batch.Length)
+            throw new InvalidOperationException(
+                $"Embedding service returned {embeddings.Count} vectors for {batch.Length} chunks.");
+
+        bool[] assigned = new bool[batch.Length];
+        foreach (OpenAIEmbedding embedding in embeddings)
+        {
+            if ((uint)embedding.Index >= (uint)batch.Length || assigned[embedding.Index])
+                throw new InvalidOperationException(
+                    $"Embedding index {embedding.Index} is outside the batch of {batch.Length} or repeated.");
+
+            assigned[embedding.Index] = true;
+            batch[embedding.Index].Embedding = embedding.ToFloats();
+        }
     }
 }

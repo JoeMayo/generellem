@@ -41,7 +41,15 @@ Optional Docker helpers for Qdrant/Ollama:
 docker compose up -d
 ```
 
-Configure local options in `GenerellemConsole/appsettings.Local.json` (chunk size, overlap, TopK, temperature, `SummarizeUserIntent`, Ollama models).
+The console can ingest, answer questions, or both:
+
+```bash
+dotnet run -- --mode ingest
+dotnet run -- --mode query
+dotnet run -- --mode both
+```
+
+Configure local options in `GenerellemConsole/appsettings.Local.json` (chunk size, overlap, TopK, temperature, `SummarizeUserIntent`, `EmbeddingBatchSize`, `RunMode`, Ollama models). `RunMode` is `Both`, `Ingest`, or `Query`. The `--mode` flag overrides it.
 
 #### Getting Started
 

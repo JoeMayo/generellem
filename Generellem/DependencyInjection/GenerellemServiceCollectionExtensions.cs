@@ -18,6 +18,8 @@ using Generellem.Services.InMemory;
 using Generellem.Services.Qdrant;
 using Generellem.Services.Sqlite;
 
+using Qdrant.Client;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -101,7 +103,14 @@ public static class GenerellemServiceCollectionExtensions
                 services.AddTransient<ILlmClientFactory, LlmClientFactory>();
                 services.AddTransient<IEmbedding, AzureOpenAIEmbedding>();
                 services.AddTransient<ILlm, AzureOpenAILlm>();
-                services.AddTransient<QdrantService>();
+                services.AddSingleton<QdrantClient>(sp =>
+                {
+                    IDynamicConfiguration configuration = sp.GetRequiredService<IDynamicConfiguration>();
+                    return QdrantClientFactory.Create(
+                        configuration[GKeys.QdrantEndpoint],
+                        configuration[GKeys.QdrantApiKey]);
+                });
+                services.AddSingleton<QdrantService>();
                 services.AddTransient<AzureSearchService>();
                 services.AddTransient<ISearchService>(sp =>
                 {
@@ -158,6 +167,19 @@ public static class GenerellemServiceCollectionExtensions
 
         if (bool.TryParse(section[nameof(GenerellemOptions.SummarizeUserIntent)], out bool summarizeUserIntent))
             options.SummarizeUserIntent = summarizeUserIntent;
+
+        if (int.TryParse(section[nameof(GenerellemOptions.EmbeddingBatchSize)], out int embeddingBatchSize))
+            options.EmbeddingBatchSize = embeddingBatchSize;
+
+        string? runModeText = section[nameof(GenerellemOptions.RunMode)];
+        if (!string.IsNullOrWhiteSpace(runModeText))
+        {
+            if (!GenerellemRunModeParser.TryParse(runModeText, out GenerellemRunMode runMode))
+                throw new InvalidOperationException(
+                    $"Generellem:RunMode '{runModeText}' is invalid. Use Both, Ingest, or Query.");
+
+            options.RunMode = runMode;
+        }
 
         if (float.TryParse(
                 section[nameof(GenerellemOptions.Temperature)],

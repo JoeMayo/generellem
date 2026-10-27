@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phase 6 is next** — performance after retrieval quality.
+- **Phase 7 is next** — hardening after performance.
 
 ```mermaid
 flowchart LR
@@ -237,10 +237,10 @@ dotnet run -- --profile Azure
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **6.1** | Register `QdrantClient` via DI (singleton/scoped) | Client not recreated on every `QdrantService` method call |
-| **6.2** | Batched/parallel embedding during ingestion | Chunks embedded in batches with rate-limit-aware retries; measurable speedup on multi-chunk docs |
-| **6.3** | Decouple ingest from query in console demo | Demo supports ingest-only, query-only, or both via flag/config |
-| **6.4** | Cache `collectionExists` invalidation | Stale cache cannot cause incorrect "index missing" behavior after external changes |
+| **6.1** | Register `QdrantClient` via DI (singleton/scoped) | ✅ Done — Azure profile registers one `QdrantClient` and one `QdrantService`. Methods reuse that client |
+| **6.2** | Batched/parallel embedding during ingestion | ✅ Done — `EmbeddingBatchSize` (default 16) batches Azure and Ollama embedding calls. HTTP 429 waits use `Retry-After` or exponential backoff |
+| **6.3** | Decouple ingest from query in console demo | ✅ Done — `--mode both\|ingest\|query` and `Generellem:RunMode` on both demos. Default remains both |
+| **6.4** | Cache `collectionExists` invalidation | ✅ Done — only a positive answer is cached, it expires, `NotFound` clears it, and index creation asks Qdrant instead of trusting the cache |
 
 **Estimated effort:** ~2 sessions  
 **Dependencies:** Phase 2–4
@@ -288,8 +288,8 @@ dotnet run -- --profile Azure
 | 3 — DX & config | Complete | Options, startup validation, renamed HTTP client factory |
 | 4 — Search parity | Complete | Qdrant and Azure AI Search implement the full `ISearchService` contract |
 | 5 — RAG quality | Complete | Boundary chunking, citations, optional intent summary, untrusted context |
-| 6 — Performance | Not started | **Next priority** |
-| 7 — Hardening | Not started | |
+| 6 — Performance | Complete | Shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation |
+| 7 — Hardening | Not started | **Next priority** |
 | 8 — Advanced | Backlog | |
 
 ---
@@ -301,4 +301,5 @@ dotnet run -- --profile Azure
 3. ~~Phase 3~~ — Complete (options, startup validation, HTTP client rename)
 4. ~~Phase 4~~ — Complete (Qdrant and Azure AI Search implement the same contract)
 5. ~~Phase 5~~ — Complete (boundary chunking, citations, optional intent summary, untrusted context)
-6. **Phase 6** — Performance
+6. ~~Phase 6~~ — Complete (shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation)
+7. **Phase 7** — Hardening

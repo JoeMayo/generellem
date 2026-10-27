@@ -1,9 +1,11 @@
-﻿using Generellem.DocumentSource;
+﻿using Generellem.DependencyInjection;
+using Generellem.DocumentSource;
 using Generellem.Processors;
 using Generellem.Services;
 
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 using OpenAI.Chat;
 
@@ -18,7 +20,8 @@ internal class GenerellemHostedService(
     IGenerellemIngestion generellemIngestion,
     IGenerellemQuery generellemQuery, 
     IHostApplicationLifetime lifetime,
-    ILogger<GenerellemHostedService> logger)
+    ILogger<GenerellemHostedService> logger,
+    IOptions<GenerellemOptions> generellemOptions)
     : IHostedService
 {
     /// <summary>
@@ -40,15 +43,30 @@ internal class GenerellemHostedService(
                     logger.LogInformation(message);
                 });
 
-            CopyDocumentSources();
+            GenerellemRunMode runMode = generellemOptions.Value.RunMode;
 
-            // Normally, this would run in a separate service that
-            // runs on a periodic timer to grab the latest files.
-            await generellemIngestion.IngestDocumentsAsync(progress, cancelToken);
+            if (runMode != GenerellemRunMode.Query)
+            {
+                CopyDocumentSources();
 
-            PrintBanner();
+                // Normally, this would run in a separate service that
+                // runs on a periodic timer to grab the latest files.
+                await generellemIngestion.IngestDocumentsAsync(progress, cancelToken);
+            }
+            else
+            {
+                Console.WriteLine("Query mode: skipping ingestion.");
+            }
 
-            await RunMainLoopAsync(cancelToken);
+            if (runMode != GenerellemRunMode.Ingest)
+            {
+                PrintBanner();
+                await RunMainLoopAsync(cancelToken);
+            }
+            else
+            {
+                Console.WriteLine("Ingest mode: skipping questions.");
+            }
         }
         catch (OperationCanceledException opcEx)
         {
