@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phase 7 is next** — hardening after performance.
+- **Phase 8 is next** — advanced RAG features after hardening.
 
 ```mermaid
 flowchart LR
@@ -253,11 +253,11 @@ dotnet run -- --profile Azure
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **7.1** | Integration tests with Testcontainers (Qdrant) | At least one ingest → search → query path tested against a real container |
-| **7.2** | InMemory profile smoke test in CI | CI runs `GenerellemConsole` ingest+query with InMemory profile (no secrets) |
-| **7.3** | CI coverage reporting | `coverlet` runs in CI; coverage trend visible (threshold optional) |
-| **7.4** | Update GitHub Actions to v4 | `checkout@v4`, `setup-dotnet@v4`; docfx workflow unchanged functionally |
-| **7.5** | Remove or implement `Promptlet` stub | Empty public API surface cleaned up |
+| **7.1** | Integration tests with Testcontainers (Qdrant) | ✅ Done — `QdrantIngestSearchQueryTests` ingests, searches, and queries one document in `qdrant/qdrant:v1.15.5`. The client factory passes an explicit URL port and still uses 6334 when the URL omits one. The test skips only when Docker is absent |
+| **7.2** | InMemory profile smoke test in CI | ✅ Done — CI runs `GenerellemConsole` `--profile InMemory --mode both` against a temp file and then `quit`. No secrets and no wiki crawl |
+| **7.3** | CI coverage reporting | ✅ Done — `coverlet` collects Cobertura on the test step, the job summary prints line and branch rates, and the report is uploaded. No threshold |
+| **7.4** | Update GitHub Actions to v4 | ✅ Done — docfx workflow `checkout` and `setup-dotnet` are v4. DocFX build and Pages deploy are unchanged. `ci.yml` was already v4 |
+| **7.5** | Remove or implement `Promptlet` stub | ✅ Done — removed the empty `Generellem.Templates.Promptlet` type. Nothing else referenced it |
 
 **Estimated effort:** ~2–3 sessions  
 **Dependencies:** Phases 1–2
@@ -289,8 +289,8 @@ dotnet run -- --profile Azure
 | 4 — Search parity | Complete | Qdrant and Azure AI Search implement the full `ISearchService` contract |
 | 5 — RAG quality | Complete | Boundary chunking, citations, optional intent summary, untrusted context |
 | 6 — Performance | Complete | Shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation |
-| 7 — Hardening | Not started | **Next priority** |
-| 8 — Advanced | Backlog | |
+| 7 — Hardening | Complete | Qdrant Testcontainers, InMemory CI smoke, coverage summary, Actions v4, Promptlet removed |
+| 8 — Advanced | Backlog | **Next priority** |
 
 ---
 
@@ -302,4 +302,5 @@ dotnet run -- --profile Azure
 4. ~~Phase 4~~ — Complete (Qdrant and Azure AI Search implement the same contract)
 5. ~~Phase 5~~ — Complete (boundary chunking, citations, optional intent summary, untrusted context)
 6. ~~Phase 6~~ — Complete (shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation)
-7. **Phase 7** — Hardening
+7. ~~Phase 7~~ — Complete (Qdrant Testcontainers, InMemory CI smoke, coverage, Actions v4, Promptlet removed)
+8. **Phase 8** — Advanced
