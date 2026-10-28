@@ -32,4 +32,77 @@ jobs:
         run: dotnet build Generellem.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test Generellem.sln --configuration Release --no-build --verbosity normal
+        run: dotnet test Generellem.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./TestResults
+
+      - name: Publish coverage summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          files = sorted(glob.glob("TestResults/**/coverage.cobertura.xml", recursive=True))
+          lines = ["## Coverage", ""]
+          if not files:
+              lines.append("No Cobertura file was produced.")
+          else:
+              lines.append("| Assembly report | Line | Branch |")
+              lines.append("| --- | ---: | ---: |")
+              for path in files:
+                  root = ET.parse(path).getroot()
+                  line_rate = float(root.attrib.get("line-rate", "0")) * 100
+                  branch_rate = float(root.attrib.get("branch-rate", "0")) * 100
+                  lines.append(f"| `{path}` | {line_rate:.1f}% | {branch_rate:.1f}% |")
+              lines.append("")
+              lines.append("No coverage threshold is enforced. The uploaded Cobertura artifact is the trend.")
+
+          text = "\n".join(lines) + "\n"
+          print(text)
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as handle:
+                  handle.write(text)
+          PY
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: TestResults/**/coverage.cobertura.xml
+          if-no-files-found: warn
+
+      - name: InMemory profile smoke
+        run: |
+          set -euo pipefail
+          smoke_dir="$(mktemp -d)"
+          docs_dir="$smoke_dir/docs"
+          mkdir -p "$docs_dir"
+          printf '%s\n' 'The periwinkle-beacon-9173 note explains how Generellem accepts contributions.' > "$docs_dir/guide.txt"
+          cat > "$smoke_dir/FileSystem.json" <<EOF
+          [
+            {
+              "description": "Smoke docs",
+              "path": "$docs_dir"
+            }
+          ]
+          EOF
+          output="$smoke_dir/smoke.out"
+          cd "$smoke_dir"
+          set +e
+          printf '%s\n' 'Where is the periwinkle-beacon-9173 note?' 'quit' \
+            | timeout 180 dotnet run --project "$GITHUB_WORKSPACE/GenerellemConsole/GenerellemConsole.csproj" --configuration Release --no-build --no-restore -- --profile InMemory --mode both >"$output" 2>&1
+          smoke_status=$?
+          set -e
+          cat "$output"
+          if [ "$smoke_status" -ne 0 ]; then
+            echo "GenerellemConsole exited $smoke_status"
+            exit "$smoke_status"
+          fi
+          if grep -F 'No retrieved context was available' "$output"; then
+            echo "Query did not retrieve the ingested document."
+            exit 1
+          fi
+          grep -F 'Based on the retrieved documentation' "$output"
+          grep -F 'periwinkle-beacon-9173' "$output"
