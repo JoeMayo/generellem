@@ -3,8 +3,12 @@
 #
 # Usage:
 #   docker compose up -d
-#   ollama pull llama3.2          # if using the ollama service
-#   ollama pull nomic-embed-text
+#   docker compose exec ollama ollama pull llama3.2
+#   docker compose exec ollama ollama pull nomic-embed-text
+#
+# Do not also run a host Ollama on port 11434. The compose service already
+# publishes that port. A host `ollama pull` works only when the host CLI
+# talks to localhost:11434 and nothing else owns the port.
 #
 # Then run:
 #   cd GenerellemConsole

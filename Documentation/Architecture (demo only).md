@@ -2,6 +2,8 @@
 
 >Note: Please visit [Architecture](https://github.com/JoeMayo/generellem/wiki/Architecture) in the wiki for the official version of the architecture. I put this here for testing a long document during the ingestion process.
 
+>Note: This essay describes the original Azure-centered shape of the project. For the current getting-started guide, use the [README](https://github.com/JoeMayo/generellem/blob/main/README.md#try-it).
+
 Generellem is a service that lets anyone use their own data with a Large Language Model (LLM). It comes as 2 products:
 
 1. An open-source product. This lets developers join a community, contribute to the project, and use the software themselves. If you're interested in using the open source, check out the GitHub repository and join in.

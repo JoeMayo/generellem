@@ -156,13 +156,11 @@ folder has Markdown files, like CONTRIBUTING.md. Also, the Documents folder
 has a growing list of content, covering supported scenarios. For testing, 
 you can browse those documents and form questions based on their content.
 
-We'll add more content as time goes by, which will help to more clearly 
-demonstrate how Generellem works.
+This demo reads OneDrive. Set up the Graph client in MSGraphDeviceCodeClientFactory before you rely on it.
 
-Remember to follow instructions on the Getting Started page to configure
-services properly:
+Quick start for the local console, which needs no Azure keys:
 
-https://github.com/JoeMayo/generellem/wiki/Getting-Started
+https://github.com/JoeMayo/generellem/blob/main/README.md#try-it
 
 Let's get started!
 

@@ -11,6 +11,7 @@
     - name: LLM
       href: api/Generellem.Llm.yml
     - name: Migrations
+      href: api/Generellem.Migrations.yml
     - name: Processors
       href: api/Generellem.Processors.yml
     - name: RAG
