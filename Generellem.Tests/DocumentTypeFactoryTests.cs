@@ -19,6 +19,8 @@ public class DocumentTypeFactoryTests
     //[InlineData("document.ppt", typeof(Powerpoint))]
     [InlineData("document.tsv", typeof(Tsv))]
     [InlineData("document.txt", typeof(Text))]
+    [InlineData("document.png", typeof(Image))]
+    [InlineData("document.jpg", typeof(Image))]
     [InlineData("document.xyz", typeof(Unknown))]
     [InlineData("document.", typeof(Unknown))]
     [InlineData("document", typeof(Unknown))]
@@ -36,5 +38,6 @@ public class DocumentTypeFactoryTests
 
         Assert.Contains(".doc", supportedTypes);
         Assert.Contains(".docx", supportedTypes);
+        Assert.Contains(".png", supportedTypes);
     }
 }

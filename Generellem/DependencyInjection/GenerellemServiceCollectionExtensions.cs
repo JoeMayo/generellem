@@ -1,5 +1,6 @@
 using System.Globalization;
 
+using Generellem.Document;
 using Generellem.DocumentSource;
 using Generellem.Embedding;
 using Generellem.Embedding.AzureOpenAI;
@@ -22,6 +23,7 @@ using Qdrant.Client;
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
@@ -68,6 +70,26 @@ public static class GenerellemServiceCollectionExtensions
         services.TryAddTransient<IPathProviderFactory, PathProviderFactory>();
         services.TryAddTransient<IRag, GenerellemDefaultRag>();
         services.TryAddTransient<TextProcessor>();
+        services.TryAddTransient<LexicalReranker>();
+        services.TryAddTransient<LlmReranker>();
+        services.TryAddTransient<IReranker>(sp =>
+        {
+            GenerellemOptions opts = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value;
+            return opts.RerankMode switch
+            {
+                RerankMode.None => new PassThroughReranker(),
+                RerankMode.Llm => sp.GetRequiredService<LlmReranker>(),
+                _ => sp.GetRequiredService<LexicalReranker>()
+            };
+        });
+        services.TryAddTransient<IImageTextExtractor>(sp =>
+        {
+            GenerellemOptions opts = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value;
+            if (!opts.EnableImageVision || opts.Profile is GenerellemProfile.InMemory or GenerellemProfile.Sqlite)
+                return new EmbeddedImageTextExtractor();
+
+            return ActivatorUtilities.CreateInstance<VisionImageTextExtractor>(sp);
+        });
 
         switch (profile)
         {
@@ -209,6 +231,23 @@ public static class GenerellemServiceCollectionExtensions
 
         if (bool.TryParse(section[nameof(GenerellemOptions.UseAzureSearch)], out bool useAzureSearch))
             options.UseAzureSearch = useAzureSearch;
+
+        string? rerankMode = section[nameof(GenerellemOptions.RerankMode)];
+        if (!string.IsNullOrWhiteSpace(rerankMode))
+        {
+            if (!Enum.TryParse(rerankMode, ignoreCase: true, out RerankMode mode))
+                throw new InvalidOperationException(
+                    $"Generellem:RerankMode '{rerankMode}' is invalid. Use None, Lexical, or Llm.");
+
+            options.RerankMode = mode;
+        }
+
+        if (bool.TryParse(section[nameof(GenerellemOptions.EnableImageVision)], out bool enableImageVision))
+            options.EnableImageVision = enableImageVision;
+
+        string? visionModel = section[nameof(GenerellemOptions.VisionModel)];
+        if (visionModel is not null)
+            options.VisionModel = visionModel;
     }
 
     static void ApplyEnvironmentOverrides(IConfiguration configuration, GenerellemOptions options)

@@ -20,6 +20,12 @@ public interface IGenerellemQuery
     Task<string> AskAsync(string queryText, Queue<ChatMessage> chatHistory, CancellationToken cancelToken);
 
     /// <summary>
+    /// Same retrieval path as <see cref="AskAsync"/>, yielding answer fragments as the model produces them.
+    /// The final fragment includes the source list when the retrieved chunks name a document.
+    /// </summary>
+    IAsyncEnumerable<string> AskStreamAsync(string queryText, Queue<ChatMessage> chatHistory, CancellationToken cancelToken);
+
+    /// <summary>
     /// Performs whatever process you need to prepare a user's text and handle the response
     /// </summary>
     /// <typeparam name="TResponse">Type of response with all data returned from the LLM.</typeparam>

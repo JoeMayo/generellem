@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 
 using Generellem.Embedding;
 using Generellem.Llm;
@@ -28,6 +29,26 @@ public class AzureOpenAIQuery(ILlm llm, IRag rag) : IGenerellemQuery
             await PromptAsync<AzureOpenAIChatRequest, AzureOpenAIChatResponse>(queryText, chatHistory, cancelToken);
 
         return WithSourceCitations(response.Response?.Text, response.Request?.TextChunks);
+    }
+
+    public async IAsyncEnumerable<string> AskStreamAsync(
+        string queryText,
+        Queue<ChatMessage> chatHistory,
+        [EnumeratorCancellation] CancellationToken cancelToken)
+    {
+        AzureOpenAIChatRequest request =
+            await rag.BuildRequestAsync<AzureOpenAIChatRequest>(queryText, chatHistory, cancelToken);
+
+        StringBuilder body = new();
+        await foreach (string token in llm.StreamAsync(request, cancelToken).ConfigureAwait(false))
+        {
+            body.Append(token);
+            yield return token;
+        }
+
+        string withSources = WithSourceCitations(body.ToString(), request.TextChunks);
+        if (withSources.Length > body.Length)
+            yield return withSources[body.Length..];
     }
 
     /// <summary>

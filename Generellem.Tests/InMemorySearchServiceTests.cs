@@ -57,6 +57,32 @@ public class InMemorySearchServiceTests
     }
 
     [Fact]
+    public async Task HybridSearch_PromotesKeywordMatch()
+    {
+        await sut.UploadDocumentsAsync(
+        [
+            new TextChunk
+            {
+                ID = "vector",
+                Content = "zebra habitat",
+                DocumentReference = "fs@vector.txt",
+                Embedding = new float[] { 0f, 1f, 0f, 0f }
+            },
+            new TextChunk
+            {
+                ID = "keyword",
+                Content = "alpha applesauce",
+                DocumentReference = "fs@keyword.txt",
+                Embedding = new float[] { 1f, 0f, 0f, 0f }
+            }
+        ], CancellationToken.None);
+
+        List<TextChunk> results = await sut.SearchAsync("alpha", new float[] { 0f, 1f, 0f, 0f }, CancellationToken.None);
+
+        Assert.Equal("keyword", results[0].ID);
+    }
+
+    [Fact]
     public async Task GetDocumentReferencesAsync_FiltersBySource()
     {
         await sut.UploadDocumentsAsync(

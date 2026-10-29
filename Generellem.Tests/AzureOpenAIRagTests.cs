@@ -64,7 +64,7 @@ public class AzureOpenAIRagTests
             }
         ];
         azSearchSvcMock
-            .Setup(srchSvc => srchSvc.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
+            .Setup(srchSvc => srchSvc.SearchAsync(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(chunks);
 
         llmMock
@@ -103,7 +103,7 @@ public class AzureOpenAIRagTests
             new() { Content = "result2" }
         };
         azSearchSvcMock
-            .Setup(search => search.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
+            .Setup(search => search.SearchAsync(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(searchResults);
         configMock
             .Setup(config => config[GKeys.AzOpenAIDeploymentName])
@@ -159,7 +159,7 @@ public class AzureOpenAIRagTests
         await azureOpenAIRag.SearchAsync("text", CancellationToken.None);
 
         azSearchSvcMock.Verify(srchSvc =>
-            srchSvc.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()),
+            srchSvc.SearchAsync(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()),
             Times.Once());
     }
 
@@ -198,7 +198,7 @@ public class AzureOpenAIRagTests
     public async Task SearchAsync_WithRequestFailedExceptionOnAzSearch_LogsAnError()
     {
         azSearchSvcMock
-            .Setup(svc => svc.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
+            .Setup(svc => svc.SearchAsync(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
             .Throws(new RequestFailedException("Unauthorized"));
 
         await Assert.ThrowsAsync<RequestFailedException>(async () =>
@@ -271,7 +271,7 @@ public class AzureOpenAIRagTests
     public async Task BuildRequestAsync_WrapsContextAsUntrustedAndCitesDocumentReference()
     {
         azSearchSvcMock
-            .Setup(search => search.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
+            .Setup(search => search.SearchAsync(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new TextChunk
@@ -301,7 +301,7 @@ public class AzureOpenAIRagTests
     public async Task AskAsync_AppendsRetrievedDocumentReferences()
     {
         azSearchSvcMock
-            .Setup(search => search.SearchAsync(It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
+            .Setup(search => search.SearchAsync(It.IsAny<string>(), It.IsAny<ReadOnlyMemory<float>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(
             [
                 new TextChunk

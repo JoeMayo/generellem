@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -44,6 +45,23 @@ public partial class LocalLlmService : ILlm
 
         IChatResponse response = new AzureOpenAIChatResponse(responseText);
         return Task.FromResult((TResponse)response);
+    }
+
+    public async IAsyncEnumerable<string> StreamAsync(
+        IChatRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        AzureOpenAIChatResponse response = await PromptAsync<AzureOpenAIChatResponse>(request, cancellationToken);
+        string text = response.Text ?? string.Empty;
+        if (text.Length == 0)
+            yield break;
+
+        string[] parts = text.Split(' ');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return i == parts.Length - 1 ? parts[i] : parts[i] + " ";
+        }
     }
 
     static bool IsIntentSummarization(string systemText) =>

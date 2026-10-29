@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net10.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Title>Generellem</Title>
-		<Version>1.0.0.0</Version>
+		<Version>1.1.0</Version>
 		<Authors>JoeAtGenerellemAI</Authors>
 		<Company>Generellem, Inc.</Company>
 		<Description>Open-Source RAG framework for C# and other .NET developers.</Description>
@@ -16,11 +16,9 @@
 		<RepositoryUrl>https://github.com/JoeMayo/generellem</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>ai, generative ai, generellem, llm</PackageTags>
-		<PackageReleaseNotes>Full Release
+		<PackageReleaseNotes>1.1.0 adds hybrid search, reranking, image text and vision ingestion, streamed answers, sqlite-vec indexing, and the .NET 10 target. Package versions follow semantic versioning. Push a vMAJOR.MINOR.PATCH tag to publish a GitHub release.
 
-Generellem is now out of Beta. It supports ingestion from File System, Web Sites, and OneDrive document sources. It also supports many common document types, including Word, PDF, MarkDown, and more.
-
-Changes since last beta include minor refactorings and a bug fix to make sure that users don't need to submit MSGraph credentials if they haven't specified any OneDrive folders.</PackageReleaseNotes>
+1.0.0 was the first stable release, with file system, web, and OneDrive ingestion.</PackageReleaseNotes>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
 		<PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
 		<Platforms>AnyCPU;x64</Platforms>
@@ -60,16 +58,16 @@ Changes since last beta include minor refactorings and a bug fix to make sure th
 		<PackageReference Include="Azure.Storage.Blobs" Version="12.25.0" />
 		<PackageReference Include="DocumentFormat.OpenXml" Version="3.3.0" />
 		<PackageReference Include="HtmlAgilityPack" Version="1.12.2" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.14">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.7" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="9.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="9.0.7" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="10.0.14" />
 		<PackageReference Include="Microsoft.Graph" Version="5.88.0" />
 		<PackageReference Include="NPOI.HWPFCore" Version="2.3.0.1" />
 		<PackageReference Include="PdfPig" Version="0.1.11" />
@@ -77,8 +75,16 @@ Changes since last beta include minor refactorings and a bug fix to make sure th
 		<PackageReference Include="Qdrant.Client" Version="1.15.0" />
 		<PackageReference Include="SharpZipLib" Version="1.4.2" />
 		<PackageReference Include="SkiaSharp" Version="3.119.0" />
-		<PackageReference Include="System.Drawing.Common" Version="9.0.7" />
-		<PackageReference Include="System.Text.Encoding.CodePages" Version="9.0.7" />
+		<PackageReference Include="System.Drawing.Common" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Kiota.Abstractions" Version="1.22.2" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="Native\sqlite-vec\osx-arm64\vec0.dylib" Pack="true" PackagePath="runtimes/osx-arm64/native/" />
+		<None Include="Native\sqlite-vec\osx-x64\vec0.dylib" Pack="true" PackagePath="runtimes/osx-x64/native/" />
+		<None Include="Native\sqlite-vec\linux-x64\vec0.so" Pack="true" PackagePath="runtimes/linux-x64/native/" />
+		<None Include="Native\sqlite-vec\win-x64\vec0.dll" Pack="true" PackagePath="runtimes/win-x64/native/" />
+		<None Include="Native\sqlite-vec\LICENSE" Pack="true" PackagePath="sqlite-vec/" />
 	</ItemGroup>
 
 	<ItemGroup>

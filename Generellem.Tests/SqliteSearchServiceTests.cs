@@ -83,6 +83,42 @@ public class SqliteSearchServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task HybridSearch_PromotesKeywordMatch()
+    {
+        await sut.UploadDocumentsAsync(
+        [
+            new TextChunk
+            {
+                ID = Guid.NewGuid().ToString(),
+                Content = "zebra habitat",
+                DocumentReference = "fs@vector",
+                SourceReference = "fs",
+                Embedding = new float[] { 0f, 1f, 0f, 0f }
+            },
+            new TextChunk
+            {
+                ID = Guid.NewGuid().ToString(),
+                Content = "alpha applesauce",
+                DocumentReference = "fs@keyword",
+                SourceReference = "fs",
+                Embedding = new float[] { 1f, 0f, 0f, 0f }
+            }
+        ], CancellationToken.None);
+
+        List<TextChunk> results = await sut.SearchAsync("alpha", new float[] { 0f, 1f, 0f, 0f }, CancellationToken.None);
+
+        Assert.Equal("alpha applesauce", results[0].Content);
+    }
+
+    [Fact]
+    public async Task CreateIndex_LoadsSqliteVec()
+    {
+        await sut.CreateIndexAsync(CancellationToken.None);
+
+        Assert.True(sut.UsesVectorIndex, sut.VectorIndexDetail);
+    }
+
+    [Fact]
     public async Task DeleteDocumentReferencesAsync_RemovesRows()
     {
         string id = Guid.NewGuid().ToString();

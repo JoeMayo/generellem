@@ -87,26 +87,27 @@ public class InMemorySearchService(IOptions<GenerellemOptions> options) : ISearc
         return Task.CompletedTask;
     }
 
-    public Task<List<TextChunk>> SearchAsync(ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
+    public Task<List<TextChunk>> SearchAsync(ReadOnlyMemory<float> embedding, CancellationToken cancelToken) =>
+        SearchAsync(string.Empty, embedding, cancelToken);
+
+    public Task<List<TextChunk>> SearchAsync(string queryText, ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
     {
         int topK = Math.Max(1, options.TopK);
+        int candidates = Math.Max(topK, topK * 4);
 
-        List<TextChunk> result =
-            chunks.Values
-                .Select(c => (Chunk: c, Score: VectorMath.CosineSimilarity(embedding.Span, c.Embedding.Span)))
-                .OrderByDescending(x => x.Score)
-                .Take(topK)
-                .Select(x => new TextChunk
-                {
-                    ID = x.Chunk.ID,
-                    Content = x.Chunk.Content,
-                    DocumentReference = x.Chunk.DocumentReference,
-                    SourceReference = x.Chunk.SourceReference,
-                    Order = x.Chunk.Order
-                })
-                .ToList();
+        List<TextChunk> vectorHits = chunks.Values
+            .Select(chunk => (Chunk: chunk, Score: VectorMath.CosineSimilarity(embedding.Span, chunk.Embedding.Span)))
+            .OrderByDescending(item => item.Score)
+            .ThenBy(item => item.Chunk.ID, StringComparer.Ordinal)
+            .Take(candidates)
+            .Select(item => CloneWithoutEmbedding(item.Chunk))
+            .ToList();
 
-        return Task.FromResult(result);
+        if (string.IsNullOrWhiteSpace(queryText))
+            return Task.FromResult(vectorHits.Take(topK).ToList());
+
+        List<TextChunk> keywordHits = HybridRank.KeywordRank(queryText, chunks.Values.Select(CloneWithoutEmbedding), candidates);
+        return Task.FromResult(HybridRank.Fuse(topK, vectorHits, keywordHits));
     }
 
     public Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken) =>

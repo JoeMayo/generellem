@@ -32,6 +32,21 @@ public class GenerellemStartupValidatorTests
     }
 
     [Fact]
+    public async Task StartAsync_ImageVisionWithoutModel_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            EnableImageVision = true
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains("VisionModel", ex.Message);
+    }
+
+    [Fact]
     public async Task StartAsync_OllamaWithBlankEndpoint_Throws()
     {
         GenerellemOptions options = new()

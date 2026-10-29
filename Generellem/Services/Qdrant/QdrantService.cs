@@ -1,5 +1,6 @@
 ﻿using Generellem.DependencyInjection;
 using Generellem.Embedding;
+using Generellem.Services;
 using Generellem.Services.Exceptions;
 
 using Grpc.Core;
@@ -60,6 +61,8 @@ public class QdrantService(
 
     CollectionExistenceCache existenceCache = new(TimeProvider.System, CollectionExistenceCache.DefaultTtl);
 
+    bool sparseVectorsReady;
+
     QdrantClient Client => sharedClient ?? throw new InvalidOperationException(
         "QdrantClient is not registered. AddGenerellem(GenerellemProfile.Azure) registers a shared client.");
 
@@ -94,6 +97,7 @@ public class QdrantService(
         if (await CollectionExistsOnServerAsync(cancelToken))
         {
             existenceCache.RememberExists();
+            await EnsureSparseVectorsAsync(cancelToken);
             return;
         }
 
@@ -113,8 +117,10 @@ public class QdrantService(
                     await client.CreateCollectionAsync(
                         collectionName: QdrantCollection,
                         vectorsConfig: new VectorParams { Size = (ulong)vectorSearchDimensions, Distance = Distance.Cosine },
-                        hnswConfig: new HnswConfigDiff { PayloadM = 16, M = 0 }),
+                        hnswConfig: new HnswConfigDiff { PayloadM = 16, M = 0 },
+                        sparseVectorsConfig: (LexicalSparse.VectorName, new SparseVectorParams())),
                 cancelToken);
+            sparseVectorsReady = true;
 
             foreach (string field in FilterPayloadFields)
             {
@@ -485,23 +491,39 @@ public class QdrantService(
 
         try
         {
-            IReadOnlyList<PointStruct> points =
-                (from doc in documents
-                 select new PointStruct
-                 {
-                     Id = new PointId() { Uuid = doc.ID! },
-                     Payload =
-                     {
+            IReadOnlyList<PointStruct> points = documents.Select(doc =>
+            {
+                PointStruct point = new()
+                {
+                    Id = new PointId() { Uuid = doc.ID! },
+                    Payload =
+                    {
                         [DocumentReference] = doc.DocumentReference!,
                         [SourceReference] = doc.SourceReference!,
                         [Content] = doc.Content!,
                         [Pathname] = qdrantPath,
                         [TenantID] = qdrantTenantID,
                         [GroupID] = qdrantGroupID
-                     },
-                     Vectors = doc.Embedding.ToArray()
-                 })
-                .ToList();
+                    }
+                };
+
+                if (!sparseVectorsReady)
+                {
+                    point.Vectors = doc.Embedding.ToArray();
+                    return point;
+                }
+
+                Dictionary<string, Vector> vectors = new()
+                {
+                    [string.Empty] = doc.Embedding.ToArray()
+                };
+                (float[] values, uint[] indices) = LexicalSparse.FromText(doc.Content);
+                if (indices.Length > 0)
+                    vectors[LexicalSparse.VectorName] = (values, indices);
+
+                point.Vectors = vectors;
+                return point;
+            }).ToList();
 
             await pipeline.ExecuteAsync(
                 async token => await Client.UpsertAsync(QdrantCollection, points),
@@ -515,6 +537,14 @@ public class QdrantService(
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rpcEx, "Please check credentials and exception details for more info.");
             throw;
         }
+    }
+
+    public virtual Task<List<TextChunk>> SearchAsync(string queryText, ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
+    {
+        if (string.IsNullOrWhiteSpace(queryText) || !sparseVectorsReady)
+            return SearchAsync(embedding, cancelToken);
+
+        return HybridSearchAsync(queryText, embedding, cancelToken);
     }
 
     public virtual async Task<List<TextChunk>> SearchAsync(ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
@@ -577,4 +607,104 @@ public class QdrantService(
 
     public virtual Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken) =>
         GetDocumentReferencesAsync(sourceReference, cancellationToken);
+
+    protected virtual async Task EnsureSparseVectorsAsync(CancellationToken cancelToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantCollection, nameof(QdrantCollection));
+
+        try
+        {
+            await Client.UpdateCollectionAsync(
+                QdrantCollection,
+                (OptimizersConfigDiff?)null,
+                sparseVectorsConfig: (LexicalSparse.VectorName, new SparseVectorParams()),
+                cancellationToken: cancelToken);
+            sparseVectorsReady = true;
+        }
+        catch (RpcException rpcEx) when (
+            rpcEx.StatusCode == StatusCode.AlreadyExists ||
+            rpcEx.Status.Detail.Contains("already", StringComparison.OrdinalIgnoreCase))
+        {
+            sparseVectorsReady = true;
+        }
+        catch (RpcException rpcEx)
+        {
+            sparseVectorsReady = false;
+            logger.LogWarning(
+                rpcEx,
+                "Qdrant collection {Collection} did not accept a lexical sparse vector. Hybrid search uses dense vectors only.",
+                QdrantCollection);
+        }
+    }
+
+    async Task<List<TextChunk>> HybridSearchAsync(string queryText, ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantApiKey, nameof(QdrantApiKey));
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantEndpoint, nameof(QdrantEndpoint));
+        ArgumentException.ThrowIfNullOrWhiteSpace(QdrantCollection, nameof(QdrantCollection));
+
+        (float[] values, uint[] indices) = LexicalSparse.FromText(queryText);
+        if (indices.Length == 0)
+            return await SearchAsync(embedding, cancelToken);
+
+        string qdrantTenantID = config[GKeys.TenantID] ?? "0";
+        string qdrantGroupID = config[GKeys.GroupID] ?? "0";
+        ulong limit = (ulong)Math.Max(1, VectorSearchLimit);
+
+        try
+        {
+            Filter filter = new()
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition { Key = TenantID, Match = new Match { Keyword = qdrantTenantID } },
+                    },
+                    new Condition
+                    {
+                        Field = new FieldCondition { Key = GroupID, Match = new Match { Keyword = qdrantGroupID } },
+                    },
+                }
+            };
+
+            PrefetchQuery dense = new()
+            {
+                Query = embedding.ToArray(),
+                Limit = limit,
+                Filter = filter
+            };
+            PrefetchQuery sparse = new()
+            {
+                Query = (values, indices),
+                Using = LexicalSparse.VectorName,
+                Limit = limit,
+                Filter = filter
+            };
+
+            IReadOnlyList<ScoredPoint> queryResult = await pipeline.ExecuteAsync(
+                async token => await Client.QueryAsync(
+                    collectionName: QdrantCollection,
+                    query: Fusion.Rrf,
+                    prefetch: new[] { dense, sparse },
+                    filter: filter,
+                    limit: limit,
+                    payloadSelector: true),
+                cancelToken);
+
+            return queryResult.Select(doc => new TextChunk
+            {
+                ID = doc.Id.Uuid,
+                Content = doc.Payload[Content].StringValue,
+                DocumentReference = doc.Payload[DocumentReference].StringValue,
+            }).ToList();
+        }
+        catch (RpcException rpcEx) when (rpcEx.StatusCode == StatusCode.NotFound)
+        {
+            InvalidateCollectionCache();
+            throw new GenerellemNeedsIngestionException(
+                "You need to perform ingestion before querying so that there are documents available for context.",
+                rpcEx);
+        }
+    }
 }

@@ -19,6 +19,12 @@ public interface ISearchService
     Task<List<TextChunk>> GetDocumentReferencesAsync(string sourceReference, CancellationToken cancellationToken);
     Task<List<TextChunk>> GetDocumentReferencesByPathAsync(string path, CancellationToken cancellationToken);
     Task<List<TextChunk>> SearchAsync(ReadOnlyMemory<float> embedding, CancellationToken cancelToken);
+
+    /// <summary>
+    /// Fuses vector similarity with keyword match.
+    /// A blank <paramref name="queryText"/> is vector-only.
+    /// </summary>
+    Task<List<TextChunk>> SearchAsync(string queryText, ReadOnlyMemory<float> embedding, CancellationToken cancelToken);
     Task<List<TextChunk>> SearchBySourceReferenceAsync(string sourceReference, CancellationToken cancellationToken);
     Task UploadDocumentsAsync(List<TextChunk> documents, CancellationToken cancelToken);
 }

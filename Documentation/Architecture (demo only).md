@@ -148,7 +148,7 @@ The last thing to do is to take the new response and update `chatHistory`, setti
 
 ## Deployment
 
-Generellem will be a .NET 8 DLL and you'll be able to get it via NuGet, GitHub release page, or source code. Right now, it's only available as source code, which will change after a few more preparatory steps. Follow the guidance in [Adding Generellem to Your App](https://github.com/JoeMayo/generellem/wiki/Adding-Generellem-to-Your-App) for ideas on how to incorporate it into your app.
+Generellem will be a .NET 10 DLL and you'll be able to get it via NuGet, GitHub release page, or source code. Right now, it's only available as source code, which will change after a few more preparatory steps. Follow the guidance in [Adding Generellem to Your App](https://github.com/JoeMayo/generellem/wiki/Adding-Generellem-to-Your-App) for ideas on how to incorporate it into your app.
 
 ## Governance 
 

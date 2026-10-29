@@ -8,7 +8,7 @@ Generellem is an opinionated framework for implementing Retrieval Augmented Gene
 
 Generellem is now a v1.0 released product. If you find a bug, create a new [Issue](https://github.com/JoeMayo/generellem/issues).
 
-The framework is cross-platform. We will be targeting the latest version of C# and the latest .NET LTS release, which is currently .NET 8.0. The initial releases are building around Azure and Windows technologies and we'll expand to other platforms and technologies as we go. BTW, the demos already run on Linux, macOS, and Windows.
+The framework is cross-platform. We target the latest .NET LTS release, which is .NET 10. The initial releases are building around Azure and Windows technologies and we'll expand to other platforms and technologies as we go. BTW, the demos already run on Linux, macOS, and Windows.
 
 #### Quick Start (no Azure, no secrets)
 
@@ -50,6 +50,10 @@ dotnet run -- --mode both
 ```
 
 Configure local options in `GenerellemConsole/appsettings.Local.json` (chunk size, overlap, TopK, temperature, `SummarizeUserIntent`, `EmbeddingBatchSize`, `RunMode`, Ollama models). `RunMode` is `Both`, `Ingest`, or `Query`. The `--mode` flag overrides it.
+
+Search fuses vectors with keywords: Azure AI Search hybrid queries, Qdrant sparse vectors, and SQLite FTS5. `Generellem:RerankMode` is `Lexical` (default), `Llm`, or `None`. The console writes the answer as it streams. Image files (`.png`, `.jpg`, `.gif`, `.bmp`) are ingested from embedded text and the file name. Set `EnableImageVision` and `VisionModel` to also ask a vision model. SQLite uses the bundled sqlite-vec index when the host can load it.
+
+Releases use semantic versions. Push a `vMAJOR.MINOR.PATCH` tag to pack Generellem and publish a GitHub release.
 
 #### Getting Started
 

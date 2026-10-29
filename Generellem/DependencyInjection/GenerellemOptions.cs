@@ -88,4 +88,21 @@ public class GenerellemOptions
     /// When using <see cref="GenerellemProfile.Azure"/>, use Azure AI Search instead of Qdrant.
     /// </summary>
     public bool UseAzureSearch { get; set; }
+
+    /// <summary>
+    /// Orders retrieved chunks before they are added to the prompt.
+    /// </summary>
+    public RerankMode RerankMode { get; set; } = RerankMode.Lexical;
+
+    /// <summary>
+    /// When true, image ingestion also asks a vision model to transcribe or describe the image.
+    /// Requires <see cref="VisionModel"/>.
+    /// </summary>
+    public bool EnableImageVision { get; set; }
+
+    /// <summary>
+    /// Vision model name. Ollama uses this model for images. Azure uses the configured chat deployment
+    /// and still requires this value so vision is an explicit choice.
+    /// </summary>
+    public string VisionModel { get; set; } = string.Empty;
 }

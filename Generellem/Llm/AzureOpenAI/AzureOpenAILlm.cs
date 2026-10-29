@@ -1,4 +1,6 @@
-﻿using Azure;
+﻿using System.Runtime.CompilerServices;
+
+using Azure;
 
 using Generellem.Services;
 
@@ -51,6 +53,26 @@ public class AzureOpenAILlm(ILlmClientFactory llmClientFact, ILogger<AzureOpenAI
         {
             logger.LogError(GenerellemLogEvents.AuthorizationFailure, rfEx, "Please check credentials and exception details for more info.");
             throw;
+        }
+    }
+
+    public virtual async IAsyncEnumerable<string> StreamAsync(
+        IChatRequest? chatRequest,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        AzureOpenAIChatRequest? request = chatRequest as AzureOpenAIChatRequest;
+        ArgumentNullException.ThrowIfNull(request, nameof(request));
+        ArgumentNullException.ThrowIfNull(request.Messages, nameof(request.Messages));
+
+        ChatClient chatClient = llmClientFact.CreateChatClient();
+        await foreach (StreamingChatCompletionUpdate update in chatClient.CompleteChatStreamingAsync(
+            request.Messages, request.Options, cancellationToken).ConfigureAwait(false))
+        {
+            foreach (ChatMessageContentPart part in update.ContentUpdate)
+            {
+                if (!string.IsNullOrEmpty(part.Text))
+                    yield return part.Text;
+            }
         }
     }
 }
