@@ -1,10 +1,23 @@
-﻿namespace Generellem.Document.DocumentTypes;
+namespace Generellem.Document.DocumentTypes;
 
 public class Image : IDocumentType
 {
-    public virtual bool CanProcess => false;
+    readonly IImageTextExtractor extractor;
 
-    public virtual List<string> SupportedExtensions => new() { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+    public Image()
+        : this(ImageText.Current)
+    {
+    }
 
-    public virtual async Task<string> GetTextAsync(Stream documentStream, string fileName) => await Task.FromResult(string.Empty);
+    public Image(IImageTextExtractor extractor)
+    {
+        this.extractor = extractor;
+    }
+
+    public virtual bool CanProcess => true;
+
+    public virtual List<string> SupportedExtensions => [".jpg", ".jpeg", ".png", ".gif", ".bmp"];
+
+    public virtual async Task<string> GetTextAsync(Stream documentStream, string fileName) =>
+        await extractor.ExtractAsync(documentStream, fileName, CancellationToken.None);
 }

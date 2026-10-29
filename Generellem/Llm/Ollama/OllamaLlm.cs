@@ -1,4 +1,6 @@
 using System.Net.Http.Json;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Generellem.DependencyInjection;
@@ -99,6 +101,81 @@ public class OllamaLlm(
                 options.OllamaEndpoint, options.OllamaChatModel);
             throw;
         }
+    }
+
+    public async IAsyncEnumerable<string> StreamAsync(
+        IChatRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        if (request is not AzureOpenAIChatRequest chatRequest)
+            throw new ArgumentException($"OllamaLlm expects {nameof(AzureOpenAIChatRequest)}.", nameof(request));
+
+        ArgumentNullException.ThrowIfNull(chatRequest.Messages);
+
+        using HttpClient client = httpClientFactory.Create();
+        client.BaseAddress = new Uri(options.OllamaEndpoint.TrimEnd('/') + "/");
+        client.Timeout = TimeSpan.FromMinutes(10);
+
+        OllamaChatRequest body = CreateBody(chatRequest, stream: true);
+        using HttpResponseMessage httpResponse = await client.PostAsJsonAsync("api/chat", body, cancellationToken);
+        httpResponse.EnsureSuccessStatusCode();
+        using Stream stream = await httpResponse.Content.ReadAsStreamAsync(cancellationToken);
+        using StreamReader reader = new(stream);
+
+        while (true)
+        {
+            string? line = await reader.ReadLineAsync(cancellationToken);
+            if (line is null)
+                yield break;
+
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            using JsonDocument document = JsonDocument.Parse(line);
+            if (document.RootElement.TryGetProperty("message", out JsonElement message) &&
+                message.TryGetProperty("content", out JsonElement content))
+            {
+                string? token = content.GetString();
+                if (!string.IsNullOrEmpty(token))
+                    yield return token;
+            }
+
+            if (document.RootElement.TryGetProperty("done", out JsonElement done) &&
+                done.ValueKind == JsonValueKind.True)
+                yield break;
+        }
+    }
+
+    OllamaChatRequest CreateBody(AzureOpenAIChatRequest chatRequest, bool stream)
+    {
+        List<OllamaMessage> messages = [];
+        foreach (ChatMessage message in chatRequest.Messages!)
+        {
+            string role = message switch
+            {
+                SystemChatMessage => "system",
+                AssistantChatMessage => "assistant",
+                UserChatMessage => "user",
+                _ => "user"
+            };
+
+            messages.Add(new OllamaMessage
+            {
+                Role = role,
+                Content = AzureOpenAIChatRequest.GetRequestContent(message)
+            });
+        }
+
+        return new OllamaChatRequest
+        {
+            Model = options.OllamaChatModel,
+            Messages = messages,
+            Stream = stream,
+            Options = new OllamaRequestOptions
+            {
+                Temperature = chatRequest.Options?.Temperature ?? options.Temperature
+            }
+        };
     }
 
     sealed class OllamaChatRequest

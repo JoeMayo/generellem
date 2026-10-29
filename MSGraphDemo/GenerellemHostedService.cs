@@ -1,4 +1,6 @@
-﻿using Generellem.DependencyInjection;
+﻿using System.Text;
+
+using Generellem.DependencyInjection;
 using Generellem.DocumentSource;
 using Generellem.Processors;
 using Generellem.Services;
@@ -116,11 +118,18 @@ internal class GenerellemHostedService(
             if (string.IsNullOrWhiteSpace(userInput) || stopWords.Contains(userInput))
                 continue;
 
-            string response = await generellemQuery.AskAsync(userInput, chatHistory, cancelToken);
+            Console.WriteLine();
+            StringBuilder streamed = new();
+            await foreach (string token in generellemQuery.AskStreamAsync(userInput, chatHistory, cancelToken))
+            {
+                streamed.Append(token);
+                Console.Write(token);
+            }
 
+            string response = streamed.ToString();
             ChatHistoryRecorder.RecordTurn(chatHistory, userInput, response);
-
-            Console.WriteLine($"\n{response}\n");
+            Console.WriteLine();
+            Console.WriteLine();
 
             if (cancelToken.IsCancellationRequested)
                 break;

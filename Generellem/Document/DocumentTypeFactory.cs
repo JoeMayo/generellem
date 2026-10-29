@@ -31,6 +31,7 @@ public class DocumentTypeFactory
             ".tsv" => new Tsv(),
             ".txt" => new Text(),
             ".xlsx" or ".xls" => new Excel(),
+            ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" => new Image(),
             _ => new Unknown(),
         };
     }

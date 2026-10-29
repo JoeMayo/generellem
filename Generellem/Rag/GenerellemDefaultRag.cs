@@ -28,7 +28,8 @@ public class GenerellemDefaultRag(
     IEmbedding embedding,
     ILlm llm,
     ILogger<GenerellemDefaultRag> logger,
-    IOptions<GenerellemOptions>? generellemOptions = null)
+    IOptions<GenerellemOptions>? generellemOptions = null,
+    IReranker? reranker = null)
     : IRag
 {
     /// <summary>
@@ -190,7 +191,17 @@ public class GenerellemDefaultRag(
         {
             ReadOnlyMemory<float> embeddingVector = await embedding.GetEmbeddingAsync(text, cancellationToken);
 
-            List<TextChunk> chunks = await searchSvc.SearchAsync(embeddingVector, cancellationToken);
+            List<TextChunk> chunks = await searchSvc.SearchAsync(text, embeddingVector, cancellationToken);
+            RerankMode rerankMode = generellemOptions?.Value.RerankMode ?? RerankMode.Lexical;
+            if (rerankMode != RerankMode.None)
+            {
+                IReranker ranker = reranker ?? new LexicalReranker();
+                chunks = await ranker.RerankAsync(text, chunks, cancellationToken);
+            }
+
+            int topK = generellemOptions?.Value.TopK > 0 ? generellemOptions.Value.TopK : chunks.Count;
+            if (topK > 0 && chunks.Count > topK)
+                chunks = chunks.Take(topK).ToList();
 
             return chunks;
         }

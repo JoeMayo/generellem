@@ -245,7 +245,10 @@ public class AzureSearchService(
         }    
     }
 
-    public virtual async Task<List<TextChunk>> SearchAsync(ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
+    public virtual Task<List<TextChunk>> SearchAsync(ReadOnlyMemory<float> embedding, CancellationToken cancelToken) =>
+        SearchAsync(string.Empty, embedding, cancelToken);
+
+    public virtual async Task<List<TextChunk>> SearchAsync(string queryText, ReadOnlyMemory<float> embedding, CancellationToken cancelToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(SearchServiceAdminApiKey, nameof(SearchServiceAdminApiKey));
         ArgumentException.ThrowIfNullOrWhiteSpace(SearchServiceEndpoint, nameof(SearchServiceEndpoint));
@@ -255,18 +258,13 @@ public class AzureSearchService(
 
         SearchClient searchClient = new(endpoint, SearchServiceIndex, credential);
 
-        var searchOptions = new SearchOptions
-        {
-            VectorSearch = new()
-            {
-                Queries = { new VectorizedQuery(embedding) { KNearestNeighborsCount = VectorSearchLimit, Fields = { nameof(TextChunk.Embedding) } } }
-            }
-        };
+        SearchOptions searchOptions = AzureSearchSchema.CreateHybridOptions(embedding, VectorSearchLimit);
+        string text = queryText ?? string.Empty;
 
         try
         {
             SearchResults<TextChunk> results = await pipeline.ExecuteAsync<SearchResults<TextChunk>>(
-                async token => await searchClient.SearchAsync<TextChunk>(searchOptions, cancellationToken: token),
+                async token => await searchClient.SearchAsync<TextChunk>(text, searchOptions, token),
                 cancelToken);
         
             List<TextChunk> chunks =

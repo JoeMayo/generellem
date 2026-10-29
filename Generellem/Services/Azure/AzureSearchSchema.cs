@@ -1,5 +1,6 @@
 using System.Globalization;
 
+using Azure.Search.Documents;
 using Azure.Search.Documents.Indexes.Models;
 using Azure.Search.Documents.Models;
 
@@ -27,6 +28,28 @@ public static class AzureSearchSchema
         TenantId,
         GroupId
     ];
+
+    public static SearchOptions CreateHybridOptions(ReadOnlyMemory<float> embedding, int limit)
+    {
+        int size = Math.Max(1, limit);
+        SearchOptions options = new()
+        {
+            Size = size,
+            VectorSearch = new VectorSearchOptions
+            {
+                Queries =
+                {
+                    new VectorizedQuery(embedding)
+                    {
+                        KNearestNeighborsCount = size,
+                        Fields = { nameof(TextChunk.Embedding) }
+                    }
+                }
+            }
+        };
+
+        return options;
+    }
 
     public static List<SearchField> CreateFields(int vectorDimensions, string vectorProfileName)
     {

@@ -86,6 +86,9 @@ public class AddGenerellemTests
             ["Generellem:EmbeddingBatchSize"] = "8",
             ["Generellem:RunMode"] = "Query",
             ["Generellem:Temperature"] = "0.4",
+            ["Generellem:RerankMode"] = "Llm",
+            ["Generellem:EnableImageVision"] = "true",
+            ["Generellem:VisionModel"] = "llava",
             ["Generellem:SubFolder"] = "FromJson",
             ["Generellem:OllamaChatModel"] = "from-json",
             ["Generellem:Profile"] = "Azure",
@@ -111,6 +114,9 @@ public class AddGenerellemTests
         Assert.Equal(0.4f, opts.Temperature);
         Assert.Equal("ConsoleDemo", opts.SubFolder);
         Assert.Equal("from-env", opts.OllamaChatModel);
+        Assert.Equal(RerankMode.Llm, opts.RerankMode);
+        Assert.True(opts.EnableImageVision);
+        Assert.Equal("llava", opts.VisionModel);
     }
 
     [Fact]

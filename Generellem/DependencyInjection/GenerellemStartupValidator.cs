@@ -1,3 +1,4 @@
+using Generellem.Document;
 using Generellem.Services;
 
 using Microsoft.Extensions.Hosting;
@@ -16,10 +17,14 @@ namespace Generellem.DependencyInjection;
 /// </remarks>
 public class GenerellemStartupValidator(
     IOptions<GenerellemOptions> options,
-    IDynamicConfiguration configuration) : IHostedService
+    IDynamicConfiguration configuration,
+    IImageTextExtractor? images = null) : IHostedService
 {
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        if (images is not null)
+            ImageText.Current = images;
+
         GenerellemOptions opts = options.Value;
         List<string> errors = [];
 
@@ -37,6 +42,9 @@ public class GenerellemStartupValidator(
 
         if (opts.EmbeddingBatchSize <= 0)
             errors.Add($"{nameof(GenerellemOptions.EmbeddingBatchSize)} must be greater than 0.");
+
+        if (opts.EnableImageVision && string.IsNullOrWhiteSpace(opts.VisionModel))
+            errors.Add($"{nameof(GenerellemOptions.VisionModel)} is required when {nameof(GenerellemOptions.EnableImageVision)} is true.");
 
         if (opts.Profile == GenerellemProfile.Ollama)
         {

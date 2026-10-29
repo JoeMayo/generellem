@@ -106,6 +106,9 @@ public class QdrantCollectionCacheTests
             return Task.FromResult(ServerExists);
         }
 
+        protected override Task EnsureSparseVectorsAsync(CancellationToken cancelToken) =>
+            Task.CompletedTask;
+
         static IDynamicConfiguration Config()
         {
             Mock<IDynamicConfiguration> config = new();

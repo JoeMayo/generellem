@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phase 8 is next** — advanced RAG features after hardening.
+- **Phases 1–8 are complete.** Start the next change from a new plan.
 
 ```mermaid
 flowchart LR
@@ -264,18 +264,18 @@ dotnet run -- --profile Azure
 
 ---
 
-## Phase 8 — Advanced (future)
+## Phase 8 — Advanced
 
-**Goal:** Competitive RAG features; tackle when core path is solid.
+**Goal:** Competitive RAG features on the hardened core path.
 
-| Step | Task | Notes |
-|------|------|-------|
-| **8.1** | Hybrid search (vector + keyword) | Azure Search native; Qdrant sparse vectors; Sqlite FTS5 for local |
-| **8.2** | Reranking step | Cross-encoder or LLM rerank before context assembly |
-| **8.3** | Multimodal ingestion | Image OCR / vision for supported doc types |
-| **8.4** | Streaming responses | `IAsyncEnumerable` from LLM through query API |
-| **8.5** | sqlite-vec native index | Upgrade SqliteSearchService from brute-force to indexed search |
-| **8.6** | .NET 9 target + package versioning | Align TFM with EF Core 9; semver release process |
+| Step | Task | Done when |
+|------|------|-----------|
+| **8.1** | Hybrid search (vector + keyword) | ✅ Done — `SearchAsync(queryText, embedding)` on every backend. Azure uses BM25 plus a vector query. Qdrant adds a `lexical` sparse vector and fuses with RRF, falling back to dense search when sparse is unavailable. SQLite uses FTS5. InMemory fuses keyword overlap with cosine. Blank query text stays vector-only |
+| **8.2** | Reranking step | ✅ Done — `RerankMode` defaults to `Lexical` and keeps the original order on ties. `Llm` is opt-in. `None` skips rerank. Rerank runs before context assembly |
+| **8.3** | Multimodal ingestion | ✅ Done — `.jpg`, `.jpeg`, `.png`, `.gif`, and `.bmp` are ingested. PNG text chunks and JPEG comments are read, and the file name is always included. `EnableImageVision` plus `VisionModel` adds an Ollama or Azure vision pass |
+| **8.4** | Streaming responses | ✅ Done — `ILlm.StreamAsync` and `AskStreamAsync` yield tokens, then the citation suffix. Both demos print tokens. `AskAsync` stays non-streaming. The local profile stream concatenates to the same answer |
+| **8.5** | sqlite-vec native index | ✅ Done — sqlite-vec 0.1.9 loadable binaries ship for osx-arm64, osx-x64, linux-x64, and win-x64. Search uses the vec0 cosine index when the extension loads, and brute-force cosine otherwise |
+| **8.6** | .NET 10 target + package versioning | ✅ Done — library, tests, and demos target `net10.0`. Microsoft.Extensions and EF Core are 10.0.14. Package version is 1.1.0. A `vMAJOR.MINOR.PATCH` tag packs the nupkg and publishes a GitHub release |
 
 ---
 
@@ -290,7 +290,7 @@ dotnet run -- --profile Azure
 | 5 — RAG quality | Complete | Boundary chunking, citations, optional intent summary, untrusted context |
 | 6 — Performance | Complete | Shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation |
 | 7 — Hardening | Complete | Qdrant Testcontainers, InMemory CI smoke, coverage summary, Actions v4, Promptlet removed |
-| 8 — Advanced | Backlog | **Next priority** |
+| 8 — Advanced | Complete | Hybrid search, lexical rerank, image ingestion, streaming, sqlite-vec, .NET 10, semver tags |
 
 ---
 
@@ -303,4 +303,4 @@ dotnet run -- --profile Azure
 5. ~~Phase 5~~ — Complete (boundary chunking, citations, optional intent summary, untrusted context)
 6. ~~Phase 6~~ — Complete (shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation)
 7. ~~Phase 7~~ — Complete (Qdrant Testcontainers, InMemory CI smoke, coverage, Actions v4, Promptlet removed)
-8. **Phase 8** — Advanced
+8. ~~Phase 8~~ — Complete (hybrid search, rerank, image ingestion, streaming, sqlite-vec, .NET 10)
