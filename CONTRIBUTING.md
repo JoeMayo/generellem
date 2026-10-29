@@ -8,7 +8,7 @@ There are many ways to contribute such as code documentation, and helping others
 
 ### New Features
 
-There are two way to see existing new features: [The Generellem Project](https://github.com/users/generellem/projects/2) or [Issues](https://github.com/JoeMayo/generellem/issues). By design, we turn all new project cards into Issues so they show up in the Issues too, where it might be easier for some people to read details. Of course, reading via the Project gives a good idea of each issue's status.
+There are two ways to see existing new features: [The Generellem Project](https://github.com/users/generellem/projects/2) or [Issues](https://github.com/JoeMayo/generellem/issues). By design, we turn all new project cards into Issues so they show up in the Issues too, where it might be easier for some people to read details. Of course, reading via the Project gives a good idea of each issue's status.
 
 If there's an issue that you would like to work on, reach out to Joe so he can assign that to you. If you don't see a feature that you would like to have, either create a new one in Issues or visit the Discussions section if you want to discuss it with other community members first.
 
@@ -26,9 +26,9 @@ You can run code coverage on Generellem test and might find gaps that we should 
 
 ### Documentation
 
-There are two main areas of documentation: Markdown in source code and the Wiki. The Markdown files are like this fine, CONTRIBUTING.md. They're located and named to fit with GitHub conventions. e.g. by placing them in the root folder, GitHub can automatically link to them through the project's main page right-side menu. The Wiki is a growing repository of documentation on architecture and developer documentation.
+The getting-started guide is the README. This file, `CONTRIBUTING.md`, sits in the repository root so GitHub can link it from the project page. The wiki should match the README and should not send people through a separate setup. The `Documentation` folder is sample content for the demo, not the developer guide.
 
-You're welcome to update the documentation in any way that would improve it. Even spelling corrections and grammar are fine. The standard is US English so we don't accidentally change back and forth between other forms. For the source code Markdown, you'll need to submit a PR, explained below. For the Wiki, you're welcome to do small spelling or gramatical improvements as you need. However, if you want to do an extensive change, please coordinate via Discussion or Issues.
+You're welcome to update the documentation in any way that would improve it. Even spelling corrections and grammar are fine. The standard is US English so we don't accidentally change back and forth between other forms. For Markdown in the repository, submit a PR, explained below. For the wiki, small spelling or grammatical fixes are fine as you go. Coordinate an extensive change through a Discussion or an Issue.
 
 >Important! All documentation must be original - not AI generated. The rationale is that Generellem uses the documentation as proof of concept of how it works by making non-public data consumable. AI generated data pollutes the data source.
 
@@ -42,11 +42,11 @@ Everything is documented on an Issue. Although the Projects feature creates a ca
 
 The conversation about an Issue should happen on the issue, rather than Discussions, email, or anywhere else. That creates a history of what we were thinking at that point in time, which matters because people usually have questions about why something was done a certain way. We can look back in time and either see an explanation or make assumptions about what technology might have been most appropriate at that point in time.
 
-When you take an Issue, take ownership of it. This means you ensure you are assigned, the status is up-to-date, all fields are properly updated, and any other information about that issue is recorded. As aluded to in the previous paragraph, the issue is a historical record of what we were thinking at the time and why we made the decisions we did.
+When you take an Issue, take ownership of it. This means you ensure you are assigned, the status is up-to-date, all fields are properly updated, and any other information about that issue is recorded. As alluded to in the previous paragraph, the issue is a historical record of what we were thinking at the time and why we made the decisions we did.
 
 ## Submitting Code
 
-Let's say you found something you want to work on, you coordinated the decision, and you have the code written. The next step would be to submit that codes to it goes into the repository. The `main` branch is locked, so you can't just check into it. This is intentional to prevent people from accidentally checking in breaking changes. The following items outline a safer approach:
+Let's say you found something you want to work on, you coordinated the decision, and you have the code written. The next step is to submit that code so it goes into the repository. The `main` branch is locked, so you can't just check into it. This is intentional to prevent people from accidentally checking in breaking changes. The following items outline a safer approach:
 
 1. You need to have a separate branch to work on. If you accidentally started working on the `main` branch, use Git to figure out how to get your changes into a new branch. If you're using Visual Studio 2022, this is easy because if you have files in your current branch, when you create and checkout a new branch, Visual Studio will ask if you want to move your changes to the new branch.
 2. Write Unit Tests. You can look at the test project source code to pick up the style of test being used. We use XUnit as the test framework and Moq for a mocking library. A PR without unit tests is unlikely to be approved until tests are written. Unit tests are part of the code.

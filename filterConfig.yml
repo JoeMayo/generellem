@@ -4,6 +4,9 @@ apiRules:
       uidRegex: ^Generellem\.Document
       type: Namespace
   - include:
+      uidRegex: ^Generellem\.DocumentSource
+      type: Namespace
+  - include:
       uidRegex: ^Generellem\.Embedding
       type: Namespace
   - include:
@@ -17,6 +20,9 @@ apiRules:
       type: Namespace
   - include:
       uidRegex: ^Generellem\.Rag
+      type: Namespace
+  - include:
+      uidRegex: ^Generellem\.Repository
       type: Namespace
   - include:
       uidRegex: ^Generellem\.Services

@@ -21,7 +21,8 @@
           "README.md"
         ],
         "exclude": [
-          "_site/**"
+          "_site/**",
+          "IMPROVEMENT_PLAN.md"
         ]
       }
     ],

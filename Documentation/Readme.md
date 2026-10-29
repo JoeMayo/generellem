@@ -1,7 +1,7 @@
 # Generellem Documentation Readme
 
-This "Documentation" folder exists for demo and testing of Generellem. Please visit the [Wiki](https://github.com/JoeMayo/generellem/wiki) for official developer documentation.
+This "Documentation" folder exists for demo and testing of Generellem. The getting-started guide is the [Try it](https://github.com/JoeMayo/generellem/blob/main/README.md#try-it) section of the README.
 
-The demo program has a FileSystem.json file that specifies this folder as a document source path. This means when you do the [Getting Started](https://github.com/JoeMayo/generellem/wiki/Getting-Started) demo, you can ask any question in any of the documents in this folder.
+The console demo ingests this repository, including this folder. Ask questions about the documents here.
 
->Note: *.doc, *.ppt, and *.xls files don't work yet, but *.docx, *.pptx, and *.xlsx work fine.
+>Note: Word (`.doc`, `.docx`) and Excel (`.xls`, `.xlsx`) are ingested. PowerPoint ingests `.pptx`. Legacy `.ppt` is not supported yet.

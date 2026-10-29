@@ -154,7 +154,7 @@ internal class GenerellemHostedService(
         if (options.Profile is GenerellemProfile.InMemory or GenerellemProfile.Sqlite)
         {
             Console.ForegroundColor = warnColor;
-            Console.WriteLine($"{options.Profile} profile — for local demo only (no cloud AI).");
+            Console.WriteLine($"{options.Profile} profile — local demo only. Answers are extractive quotes from your documents, not a chat model.");
             Console.ResetColor();
         }
 
@@ -181,8 +181,8 @@ you can browse those documents and form questions based on their content.
 
 Profiles:
   --profile InMemory  (default) zero setup, extractive answers
-  --profile Sqlite    vectors persisted in SQLite
-  --profile Ollama    real local AI (requires Ollama)
+  --profile Sqlite    persisted vectors, extractive answers
+  --profile Ollama    local chat model (requires Ollama)
   --profile Azure     Azure OpenAI + Qdrant, or Azure AI Search when UseAzureSearch is true
 
 Modes:
@@ -192,7 +192,7 @@ Modes:
 
 Set Generellem:RunMode in appsettings.Local.json when you omit the flag.
 
-Docs: https://github.com/JoeMayo/generellem/wiki/Getting-Started
+Quick start: https://github.com/JoeMayo/generellem/blob/main/README.md#try-it
 
 Let's get started!");
         Console.ResetColor();
