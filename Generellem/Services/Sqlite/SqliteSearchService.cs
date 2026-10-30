@@ -229,6 +229,10 @@ public class SqliteSearchService(GenerellemContext ctx, IOptions<GenerellemOptio
         {
             EnsureSchema(connection);
             using SqliteCommand command = connection.CreateCommand();
+            // FTS5 rank is bm25(), and a smaller value is a better hit, same
+            // direction as vector distance. Ascending order is required.
+            // HybridRank fuses this order and does not read the raw score.
+            // Negate bm25() before adding it to a higher-is-better similarity.
             command.CommandText =
                 """
                 SELECT Id
