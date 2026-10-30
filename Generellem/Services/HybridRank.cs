@@ -4,6 +4,10 @@ namespace Generellem.Services;
 
 /// <summary>
 /// Reciprocal rank fusion for vector and keyword hit lists.
+/// Both lists must already be best-first. Fusion uses position only.
+/// FTS5 <c>bm25()</c> and vector distance are lower-is-better, so do not
+/// sort those scores descending. Negate <c>bm25()</c> before adding it to
+/// a higher-is-better similarity.
 /// </summary>
 public static class HybridRank
 {
