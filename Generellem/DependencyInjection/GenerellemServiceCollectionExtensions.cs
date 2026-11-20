@@ -21,6 +21,7 @@ using Generellem.Services.Sqlite;
 
 using Qdrant.Client;
 
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -97,12 +98,14 @@ public static class GenerellemServiceCollectionExtensions
                 services.AddSingleton<ISearchService, InMemorySearchService>();
                 services.AddTransient<IEmbedding, DeterministicEmbeddingService>();
                 services.AddTransient<ILlm, LocalLlmService>();
+                services.AddTransient<IChatClient, ExtractiveChatClient>();
                 break;
 
             case GenerellemProfile.Sqlite:
                 services.AddTransient<ISearchService, SqliteSearchService>();
                 services.AddTransient<IEmbedding, DeterministicEmbeddingService>();
                 services.AddTransient<ILlm, LocalLlmService>();
+                services.AddTransient<IChatClient, ExtractiveChatClient>();
                 break;
 
             case GenerellemProfile.Ollama:
