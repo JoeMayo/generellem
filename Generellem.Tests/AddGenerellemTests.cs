@@ -4,6 +4,8 @@ using Generellem.Embedding.Deterministic;
 using Generellem.Llm;
 using Generellem.Llm.Local;
 using Generellem.Services;
+
+using Microsoft.Extensions.AI;
 using Generellem.Services.InMemory;
 using Generellem.Services.Qdrant;
 using Generellem.Services.Sqlite;
@@ -35,6 +37,7 @@ public class AddGenerellemTests
         Assert.IsType<InMemorySearchService>(sp.GetRequiredService<ISearchService>());
         Assert.IsType<DeterministicEmbeddingService>(sp.GetRequiredService<IEmbedding>());
         Assert.IsType<LocalLlmService>(sp.GetRequiredService<ILlm>());
+        Assert.IsType<ExtractiveChatClient>(sp.GetRequiredService<IChatClient>());
         Assert.Equal(GenerellemProfile.InMemory, sp.GetRequiredService<IOptions<GenerellemOptions>>().Value.Profile);
         Assert.Equal(64, sp.GetRequiredService<IOptions<GenerellemOptions>>().Value.EmbeddingDimensions);
         Assert.True(sp.GetRequiredService<IOptions<GenerellemOptions>>().Value.SummarizeUserIntent);
@@ -55,6 +58,19 @@ public class AddGenerellemTests
         Assert.IsType<SqliteSearchService>(sp.GetRequiredService<ISearchService>());
         Assert.IsType<DeterministicEmbeddingService>(sp.GetRequiredService<IEmbedding>());
         Assert.IsType<LocalLlmService>(sp.GetRequiredService<ILlm>());
+        Assert.IsType<ExtractiveChatClient>(sp.GetRequiredService<IChatClient>());
+    }
+
+    [Fact]
+    public void AddGenerellem_Ollama_DoesNotRegisterExtractiveChatClient()
+    {
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new ConfigurationBuilder().Build());
+
+        services.AddGenerellem(GenerellemProfile.Ollama);
+
+        Assert.DoesNotContain(services, descriptor => descriptor.ServiceType == typeof(IChatClient));
     }
 
     [Fact]

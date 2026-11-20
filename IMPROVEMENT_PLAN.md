@@ -363,7 +363,7 @@ Dispose the client when the enumeration finishes or is cancelled. The stdio tran
 
 **Goal:** Use Gemini, Anthropic, Mistral, and the next service without a Generellem connector for each one. The RAG pipeline calls `IChatClient` from `Microsoft.Extensions.AI`. A new model is an OpenAI-compatible endpoint plus a model name, or an `IChatClient` the host registers.
 
-**Status:** In progress. 10.1 is done. Independent of Phase 9.
+**Status:** In progress. 10.1 and 10.2 are done. Independent of Phase 9.
 
 `ILlm` is a small interface, and the pipeline does not use it that way. `GenerellemDefaultRag.BuildRequestAsync` always builds an `AzureOpenAIChatRequest` of `OpenAI.Chat.ChatMessage`. `OllamaLlm` and `LocalLlmService` accept only that request. `LlmReranker` casts the response to `AzureOpenAIChatResponse`. Both demos store history in `Queue<OpenAI.Chat.ChatMessage>`. A Gemini or Anthropic class would have to pretend to be Azure. Phase 10 removes that shape from the pipeline.
 
@@ -399,7 +399,7 @@ Embeddings are a second registration. Anthropic has no embeddings API, so the ch
 | Step | Task | Done when |
 |------|------|-----------|
 | **10.1** | Package and options | ✅ Done — `Microsoft.Extensions.AI.Abstractions` 10.11.0. `ChatEndpoint`, `ChatApiKey`, `ChatModel`, `EmbeddingEndpoint`, `EmbeddingApiKey`, and `EmbeddingModel` bind from the `Generellem` section and stay empty in `appsettings.json`. A set endpoint must be an absolute http(s) URI and must name a model. A blank API key is allowed only for a loopback endpoint. Package version is 2.0.0 |
-| **10.2** | Extractive client | `ExtractiveChatClient` implements `IChatClient` and reproduces `LocalLlmService` answers, including the stream that concatenates to the same text. InMemory and Sqlite register it. Existing ask and stream tests pass |
+| **10.2** | Extractive client | ✅ Done — `ExtractiveChatClient` implements `IChatClient` and shares the extractive answer with `LocalLlmService`. Streaming chunks concatenate to the same text. InMemory and Sqlite register it. Ollama and Azure do not. It does not call a network or request tools |
 | **10.3** | OpenAI-compatible client | A stub `HttpMessageHandler` proves one non-streaming call and one streaming call against `/v1/chat/completions`, with the configured model and bearer key. The Ollama profile registers this client at `{OllamaEndpoint}/v1`. No live Ollama in CI |
 | **10.4** | Pipeline uses `IChatClient` | `GenerellemDefaultRag`, `AzureOpenAIQuery`, `LlmReranker`, and both demos take `IList<ChatMessage>` and call `IChatClient`. They do not mention `AzureOpenAIChatRequest`, `AzureOpenAIChatResponse`, or `OpenAI.Chat`. Intent summary is one `GetResponseAsync` call. Temperature is `ChatOptions.Temperature` |
 | **10.5** | Embeddings | An OpenAI-compatible `IEmbeddingGenerator<string, Embedding<float>>` serves the Ollama profile and a configured embedding endpoint, proved with a stub handler against `/v1/embeddings`. Azure embeddings and `DeterministicEmbeddingService` stay. A mismatch between the returned vector length and `EmbeddingDimensions` fails the call |
@@ -461,7 +461,7 @@ Phase 10 supplies `ChatMessage` and tool calls, so this phase does not invent a 
 | 7 — Hardening | Complete | Qdrant Testcontainers, InMemory CI smoke, coverage summary, Actions v4, Promptlet removed |
 | 8 — Advanced | Complete | Hybrid search, lexical rerank, image ingestion, streaming, sqlite-vec, .NET 10, semver tags |
 | 9 — MCP documents | Ready | `McpDocumentSource` beside File System and Website. No new product connectors. Independent of Phase 10 |
-| 10 — `IChatClient` | In progress | 10.1 done. OpenAI-compatible endpoint settings and startup checks. Package version 2.0.0. No per-vendor connector |
+| 10 — `IChatClient` | In progress | 10.1 and 10.2 done. Endpoint settings, and `ExtractiveChatClient` on InMemory and Sqlite. Package version 2.0.0 |
 | 11 — MCP tools | Later | After Phase 9 and Phase 10. Tool loop on `IChatClient` |
 
 ---
@@ -477,5 +477,5 @@ Phase 10 supplies `ChatMessage` and tool calls, so this phase does not invent a 
 7. ~~Phase 7~~ — Complete (Qdrant Testcontainers, InMemory CI smoke, coverage, Actions v4, Promptlet removed)
 8. ~~Phase 8~~ — Complete (hybrid search, rerank, image ingestion, streaming, sqlite-vec, .NET 10)
 9. **Phase 9** — MCP document sources (ready, independent)
-10. **Phase 10** — `IChatClient` for any chat model (10.1 done, independent of Phase 9)
+10. **Phase 10** — `IChatClient` for any chat model (10.1 and 10.2 done, independent of Phase 9)
 11. Phase 11 — MCP tools at query time, after Phase 9 and Phase 10
