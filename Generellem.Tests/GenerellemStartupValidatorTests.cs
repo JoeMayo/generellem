@@ -137,6 +137,89 @@ public class GenerellemStartupValidatorTests
     }
 
     [Fact]
+    public async Task StartAsync_MistralCompatibleEndpoints_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            ChatEndpoint = "https://api.mistral.ai/v1",
+            ChatApiKey = "key",
+            ChatModel = "mistral-small-latest",
+            EmbeddingEndpoint = "https://api.mistral.ai/v1",
+            EmbeddingApiKey = "key",
+            EmbeddingModel = "mistral-embed"
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_LoopbackEndpointsWithoutApiKeys_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            ChatEndpoint = "http://127.0.0.1:11434/v1",
+            ChatModel = "llama3.2",
+            EmbeddingEndpoint = "http://localhost:11434/v1",
+            EmbeddingModel = "nomic-embed-text"
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_RemoteEndpointsWithoutApiKeys_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            ChatEndpoint = "https://api.mistral.ai/v1",
+            ChatModel = "mistral-small-latest",
+            EmbeddingEndpoint = "https://api.mistral.ai/v1",
+            EmbeddingModel = "mistral-embed"
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(GenerellemOptions.ChatApiKey), ex.Message);
+        Assert.Contains(nameof(GenerellemOptions.EmbeddingApiKey), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_ChatEndpointWithoutModel_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            ChatEndpoint = "http://localhost:11434/v1"
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(GenerellemOptions.ChatModel), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_ChatEndpointNotHttp_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            ChatEndpoint = "api.mistral.ai",
+            ChatModel = "mistral-small-latest",
+            ChatApiKey = "key"
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(GenerellemOptions.ChatEndpoint), ex.Message);
+    }
+
+    [Fact]
     public async Task StartAsync_AzureWithRequiredKeys_DoesNotThrow()
     {
         Dictionary<string, string?> values = new()

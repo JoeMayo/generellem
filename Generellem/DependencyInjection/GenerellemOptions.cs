@@ -105,4 +105,36 @@ public class GenerellemOptions
     /// and still requires this value so vision is an explicit choice.
     /// </summary>
     public string VisionModel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// OpenAI-compatible chat completions endpoint, including the <c>/v1</c> suffix.
+    /// Empty until a host sets it. Ollama's own endpoint stays <see cref="OllamaEndpoint"/>.
+    /// </summary>
+    public string ChatEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// API key for <see cref="ChatEndpoint"/>. Blank is allowed only when the endpoint is a loopback address.
+    /// </summary>
+    public string ChatApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Model name sent to <see cref="ChatEndpoint"/>. Required when that endpoint is set.
+    /// </summary>
+    public string ChatModel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// OpenAI-compatible embeddings endpoint, including the <c>/v1</c> suffix.
+    /// Empty until a host sets it. This can differ from <see cref="ChatEndpoint"/>.
+    /// </summary>
+    public string EmbeddingEndpoint { get; set; } = string.Empty;
+
+    /// <summary>
+    /// API key for <see cref="EmbeddingEndpoint"/>. Blank is allowed only when the endpoint is a loopback address.
+    /// </summary>
+    public string EmbeddingApiKey { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Model name sent to <see cref="EmbeddingEndpoint"/>. Required when that endpoint is set.
+    /// </summary>
+    public string EmbeddingModel { get; set; } = string.Empty;
 }

@@ -248,6 +248,20 @@ public static class GenerellemServiceCollectionExtensions
         string? visionModel = section[nameof(GenerellemOptions.VisionModel)];
         if (visionModel is not null)
             options.VisionModel = visionModel;
+
+        BindOptionalString(section, nameof(GenerellemOptions.ChatEndpoint), value => options.ChatEndpoint = value);
+        BindOptionalString(section, nameof(GenerellemOptions.ChatApiKey), value => options.ChatApiKey = value);
+        BindOptionalString(section, nameof(GenerellemOptions.ChatModel), value => options.ChatModel = value);
+        BindOptionalString(section, nameof(GenerellemOptions.EmbeddingEndpoint), value => options.EmbeddingEndpoint = value);
+        BindOptionalString(section, nameof(GenerellemOptions.EmbeddingApiKey), value => options.EmbeddingApiKey = value);
+        BindOptionalString(section, nameof(GenerellemOptions.EmbeddingModel), value => options.EmbeddingModel = value);
+    }
+
+    static void BindOptionalString(IConfigurationSection section, string name, Action<string> assign)
+    {
+        string? value = section[name];
+        if (value is not null)
+            assign(value);
     }
 
     static void ApplyEnvironmentOverrides(IConfiguration configuration, GenerellemOptions options)

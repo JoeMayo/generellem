@@ -4,7 +4,7 @@
 
 Generellem is an opinionated .NET framework for Retrieval Augmented Generation (RAG). Point it at your documents and ask questions.
 
-Generellem 1.1.0 targets .NET 10 and runs on Linux, macOS, and Windows. The default console profile needs no Azure account, no API keys, and no Docker.
+Generellem 2.0.0 targets .NET 10 and runs on Linux, macOS, and Windows. The default console profile needs no Azure account, no API keys, and no Docker.
 
 ## Try it
 
@@ -74,7 +74,7 @@ Ingestion and query code talk to `ISearchService`. The profile picks the impleme
 - **Streaming.** `AskStreamAsync` yields tokens, then the citation suffix. Both demos print the stream. `AskAsync` stays non-streaming.
 - **Images.** `.jpg`, `.jpeg`, `.png`, `.gif`, and `.bmp` are ingested from embedded text (PNG text chunks and JPEG comments) and the file name. Set `EnableImageVision` and `VisionModel` for an Ollama or Azure vision pass. Vision is off by default.
 - **sqlite-vec.** The Sqlite profile uses the bundled sqlite-vec 0.1.9 index when the host can load it (osx-arm64, osx-x64, linux-x64, win-x64). Otherwise search scans with cosine similarity.
-- **Releases.** The package version is 1.1.0. Push a `vMAJOR.MINOR.PATCH` tag to pack Generellem and publish a GitHub release.
+- **Releases.** The package version is 2.0.0. Push a `vMAJOR.MINOR.PATCH` tag to pack Generellem and publish a GitHub release.
 
 ## Configure
 

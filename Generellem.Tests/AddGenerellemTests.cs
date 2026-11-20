@@ -91,6 +91,12 @@ public class AddGenerellemTests
             ["Generellem:VisionModel"] = "llava",
             ["Generellem:SubFolder"] = "FromJson",
             ["Generellem:OllamaChatModel"] = "from-json",
+            ["Generellem:ChatEndpoint"] = "https://api.mistral.ai/v1",
+            ["Generellem:ChatApiKey"] = "chat-key",
+            ["Generellem:ChatModel"] = "mistral-small-latest",
+            ["Generellem:EmbeddingEndpoint"] = "https://api.mistral.ai/v1",
+            ["Generellem:EmbeddingApiKey"] = "embed-key",
+            ["Generellem:EmbeddingModel"] = "mistral-embed",
             ["Generellem:Profile"] = "Azure",
             [GKeys.OllamaChatModel] = "from-env"
         };
@@ -117,6 +123,12 @@ public class AddGenerellemTests
         Assert.Equal(RerankMode.Llm, opts.RerankMode);
         Assert.True(opts.EnableImageVision);
         Assert.Equal("llava", opts.VisionModel);
+        Assert.Equal("https://api.mistral.ai/v1", opts.ChatEndpoint);
+        Assert.Equal("chat-key", opts.ChatApiKey);
+        Assert.Equal("mistral-small-latest", opts.ChatModel);
+        Assert.Equal("https://api.mistral.ai/v1", opts.EmbeddingEndpoint);
+        Assert.Equal("embed-key", opts.EmbeddingApiKey);
+        Assert.Equal("mistral-embed", opts.EmbeddingModel);
     }
 
     [Fact]
