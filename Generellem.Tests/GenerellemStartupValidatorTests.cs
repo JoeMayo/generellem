@@ -219,6 +219,303 @@ public class GenerellemStartupValidatorTests
         Assert.Contains(nameof(GenerellemOptions.ChatEndpoint), ex.Message);
     }
 
+    [Theory]
+    [InlineData(GenerellemProfile.InMemory)]
+    [InlineData(GenerellemProfile.Sqlite)]
+    [InlineData(GenerellemProfile.Ollama)]
+    [InlineData(GenerellemProfile.Azure)]
+    public async Task StartAsync_EmptyMcpServers_DoesNotThrow(GenerellemProfile profile)
+    {
+        GenerellemStartupValidator validator = Create(
+            new GenerellemOptions { Profile = profile, McpServers = [] },
+            profile == GenerellemProfile.Azure ? AzureKeys() : null);
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_ValidStdioMcpServer_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio("notes")]
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_ValidHttpMcpServer_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.Sqlite,
+            McpServers = [Http("docs")]
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_StdioAndHttpMcpServers_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.Ollama,
+            McpServers = [Stdio("notes"), Http("docs")]
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("-notes")]
+    [InlineData("notes extra")]
+    [InlineData("notes.extra")]
+    public async Task StartAsync_McpServerBadName_Throws(string name)
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio(name)]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Name), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpServerNameAtMaxLength_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio(new string('n', 64))]
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpServerNameTooLong_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio(new string('a', 65))]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Name), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpServerDuplicateName_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio("notes"), Http("notes")]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains("unique", ex.Message);
+        Assert.DoesNotContain("prefix", ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpServerPrefixCollision_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio("notes"), Http("notes-extra")]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains("prefix", ex.Message);
+        Assert.Contains("notes", ex.Message);
+        Assert.Contains("notes-extra", ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpNamesThatDifferByCase_DoesNotThrow()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [Stdio("Notes"), Http("notes")]
+        });
+
+        await validator.StartAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task StartAsync_StdioMissingCommand_Throws()
+    {
+        McpServerOptions server = Stdio("notes");
+        server.Command = " ";
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Command), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_HttpMissingUrl_Throws()
+    {
+        McpServerOptions server = Http("docs");
+        server.Url = "";
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Url), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpServerSetsCommandAndUrl_Throws()
+    {
+        McpServerOptions server = Stdio("notes");
+        server.Url = "https://mcp.example.com/mcp";
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains("must not set both", ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_HttpUrlNotAbsolute_Throws()
+    {
+        McpServerOptions server = Http("docs");
+        server.Url = "mcp.example.com";
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Url), ex.Message);
+        Assert.Contains("absolute", ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpServerMissingTransport_Throws()
+    {
+        McpServerOptions server = Stdio("notes");
+        server.Transport = McpTransport.Unspecified;
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Transport), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_StdioWithHeaders_Throws()
+    {
+        McpServerOptions server = Stdio("notes");
+        server.Headers["Authorization"] = "Bearer placeholder";
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Headers), ex.Message);
+        Assert.DoesNotContain("Bearer", ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_HttpWithArgumentsOrEnvironment_Throws()
+    {
+        McpServerOptions server = Http("docs");
+        server.Arguments.Add("--verbose");
+        server.Environment["TOKEN"] = "secret";
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.Arguments), ex.Message);
+        Assert.Contains(nameof(McpServerOptions.Environment), ex.Message);
+        Assert.DoesNotContain("secret", ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpMaxResourcesNotPositive_Throws()
+    {
+        McpServerOptions server = Stdio("notes");
+        server.MaxResources = 0;
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpServers = [server]
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(McpServerOptions.MaxResources), ex.Message);
+    }
+
+    [Fact]
+    public async Task StartAsync_McpMaxBlobBytesNotPositive_Throws()
+    {
+        GenerellemStartupValidator validator = Create(new GenerellemOptions
+        {
+            Profile = GenerellemProfile.InMemory,
+            McpMaxBlobBytes = 0
+        });
+
+        InvalidOperationException ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => validator.StartAsync(CancellationToken.None));
+
+        Assert.Contains(nameof(GenerellemOptions.McpMaxBlobBytes), ex.Message);
+    }
+
     [Fact]
     public async Task StartAsync_AzureWithRequiredKeys_DoesNotThrow()
     {
@@ -236,6 +533,34 @@ public class GenerellemStartupValidatorTests
 
         await validator.StartAsync(CancellationToken.None);
     }
+
+    static McpServerOptions Stdio(string name) => new()
+    {
+        Name = name,
+        Transport = McpTransport.Stdio,
+        Command = "npx",
+        Arguments = ["-y", "server"],
+        Environment = new Dictionary<string, string> { ["NOTES_ROOT"] = "/tmp" }
+    };
+
+    static McpServerOptions Http(string name) => new()
+    {
+        Name = name,
+        Transport = McpTransport.Http,
+        Url = "https://mcp.example.com/mcp",
+        Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer placeholder" }
+    };
+
+    static Dictionary<string, string?> AzureKeys() => new()
+    {
+        [GKeys.AzOpenAIApiKey] = "key",
+        [GKeys.AzOpenAIDeploymentName] = "chat",
+        [GKeys.AzOpenAIEmbeddingName] = "embed",
+        [GKeys.AzOpenAIEndpointName] = "https://example.openai.azure.com",
+        [GKeys.QdrantApiKey] = "qdrant-key",
+        [GKeys.QdrantCollection] = "generellem",
+        [GKeys.QdrantEndpoint] = "http://localhost:6334"
+    };
 
     static GenerellemStartupValidator Create(GenerellemOptions options, Dictionary<string, string?>? values = null) =>
         new(Options.Create(options), new MemoryConfiguration(values));

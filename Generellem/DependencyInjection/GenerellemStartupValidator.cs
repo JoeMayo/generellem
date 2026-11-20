@@ -14,6 +14,7 @@ namespace Generellem.DependencyInjection;
 /// Ollama uses its option defaults and only fails when those values are blank.
 /// Azure requires the Azure OpenAI keys plus either Qdrant or Azure AI Search.
 /// Blob, Cosmos, and Microsoft Graph keys belong to optional hosts and are not required here.
+/// An empty <see cref="GenerellemOptions.McpServers"/> list is valid on every profile.
 /// </remarks>
 public class GenerellemStartupValidator(
     IOptions<GenerellemOptions> options,
@@ -63,6 +64,8 @@ public class GenerellemStartupValidator(
             nameof(GenerellemOptions.EmbeddingEndpoint),
             nameof(GenerellemOptions.EmbeddingModel),
             nameof(GenerellemOptions.EmbeddingApiKey));
+
+        ValidateMcpServers(errors, opts);
 
         if (opts.Profile == GenerellemProfile.Ollama)
         {
@@ -123,6 +126,91 @@ public class GenerellemStartupValidator(
 
         if (string.IsNullOrWhiteSpace(model))
             errors.Add($"{modelName} is required when {endpointName} is set.");
+    }
+
+    static void ValidateMcpServers(List<string> errors, GenerellemOptions opts)
+    {
+        if (opts.McpMaxBlobBytes <= 0)
+            errors.Add($"{nameof(GenerellemOptions.McpMaxBlobBytes)} must be greater than 0.");
+
+        IReadOnlyList<McpServerOptions> servers = opts.McpServers ?? [];
+        for (int i = 0; i < servers.Count; i++)
+        {
+            McpServerOptions? server = servers[i];
+            string label = $"{nameof(GenerellemOptions.McpServers)}[{i}]";
+            if (server is null)
+            {
+                errors.Add($"{label} is required.");
+                continue;
+            }
+
+            if (!McpServerOptions.IsValidName(server.Name))
+                errors.Add($"{label}.{nameof(McpServerOptions.Name)} must match {McpServerOptions.NamePatternText}.");
+
+            if (server.MaxResources <= 0)
+                errors.Add($"{label}.{nameof(McpServerOptions.MaxResources)} must be greater than 0.");
+
+            bool hasCommand = !string.IsNullOrWhiteSpace(server.Command);
+            bool hasUrl = !string.IsNullOrWhiteSpace(server.Url);
+            if (hasCommand && hasUrl)
+                errors.Add($"{label} must not set both {nameof(McpServerOptions.Command)} and {nameof(McpServerOptions.Url)}.");
+
+            switch (server.Transport)
+            {
+                case McpTransport.Stdio:
+                    if (!hasCommand)
+                        errors.Add($"{label}.{nameof(McpServerOptions.Command)} is required for stdio.");
+                    if (hasUrl)
+                        errors.Add($"{label}.{nameof(McpServerOptions.Url)} is not allowed for stdio.");
+                    if (server.Headers is { Count: > 0 })
+                        errors.Add($"{label}.{nameof(McpServerOptions.Headers)} are not allowed for stdio.");
+                    break;
+
+                case McpTransport.Http:
+                    if (!hasUrl)
+                        errors.Add($"{label}.{nameof(McpServerOptions.Url)} is required for http.");
+                    else if (!IsAbsoluteHttpUri(server.Url))
+                        errors.Add($"{label}.{nameof(McpServerOptions.Url)} must be an absolute http or https URI.");
+                    if (hasCommand)
+                        errors.Add($"{label}.{nameof(McpServerOptions.Command)} is not allowed for http.");
+                    if (server.Arguments is { Count: > 0 })
+                        errors.Add($"{label}.{nameof(McpServerOptions.Arguments)} are not allowed for http.");
+                    if (server.Environment is { Count: > 0 })
+                        errors.Add($"{label}.{nameof(McpServerOptions.Environment)} is not allowed for http.");
+                    break;
+
+                default:
+                    errors.Add($"{label}.{nameof(McpServerOptions.Transport)} must be stdio or http.");
+                    break;
+            }
+        }
+
+        AddMcpNameCollisions(errors, servers);
+    }
+
+    static void AddMcpNameCollisions(List<string> errors, IReadOnlyList<McpServerOptions> servers)
+    {
+        List<string> names = [];
+        foreach (McpServerOptions? server in servers)
+        {
+            if (server is not null && McpServerOptions.IsValidName(server.Name))
+                names.Add(server.Name);
+        }
+
+        for (int i = 0; i < names.Count; i++)
+        {
+            for (int j = i + 1; j < names.Count; j++)
+            {
+                string left = names[i];
+                string right = names[j];
+                if (string.Equals(left, right, StringComparison.Ordinal))
+                    errors.Add($"{nameof(GenerellemOptions.McpServers)} names must be unique. '{left}' is repeated.");
+                else if (right.StartsWith(left, StringComparison.Ordinal))
+                    errors.Add($"{nameof(GenerellemOptions.McpServers)} names must not be a prefix of each other. '{left}' is a prefix of '{right}'.");
+                else if (left.StartsWith(right, StringComparison.Ordinal))
+                    errors.Add($"{nameof(GenerellemOptions.McpServers)} names must not be a prefix of each other. '{right}' is a prefix of '{left}'.");
+            }
+        }
     }
 
     static bool IsAbsoluteHttpUri(string endpoint) =>

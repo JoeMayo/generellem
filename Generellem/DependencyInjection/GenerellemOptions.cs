@@ -137,4 +137,19 @@ public class GenerellemOptions
     /// Model name sent to <see cref="EmbeddingEndpoint"/>. Required when that endpoint is set.
     /// </summary>
     public string EmbeddingModel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Default decoded-blob limit for one MCP resource, 20 MiB.
+    /// </summary>
+    public const long DefaultMcpMaxBlobBytes = 20L * 1024 * 1024;
+
+    /// <summary>
+    /// Largest decoded MCP blob Generellem will ingest, in bytes.
+    /// </summary>
+    public long McpMaxBlobBytes { get; set; } = DefaultMcpMaxBlobBytes;
+
+    /// <summary>
+    /// MCP servers to ingest. Empty means no MCP sources.
+    /// </summary>
+    public List<McpServerOptions> McpServers { get; set; } = [];
 }

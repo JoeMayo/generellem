@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phases 1–8 are complete.** Phase 9 (MCP documents) and Phase 10 (`IChatClient`) are independent and both ready. Phase 11 starts after both.
+- **Phases 1–8 are complete.** Phase 9 (MCP documents) is in progress. Phase 10 (`IChatClient`) is in progress and independent of Phase 9. Phase 11 starts after both.
 
 ```mermaid
 flowchart LR
@@ -287,7 +287,7 @@ dotnet run -- --profile Azure
 
 **Goal:** Ingest documents from MCP servers through the existing `IDocumentSource` pipeline. Notion, Google Docs, Loop, and a logged-in website are MCP servers the user runs. Generellem does not grow a connector per product.
 
-**Status:** Next. Not started.
+**Status:** In progress. 9.1 is done.
 
 MCP resources are the same shape as `GetDocumentsAsync`: a list of items, then the bytes or text of each one. `Ingestion` already extracts text, hashes it, chunks it, embeds it, and deletes references that the source no longer returns. Phase 9 adds a source. It leaves chunking, embeddings, `ISearchService`, `ILlm`, and the query loop alone.
 
@@ -338,7 +338,7 @@ Dispose the client when the enumeration finishes or is cancelled. The stdio tran
 
 | Step | Task | Done when |
 |------|------|-----------|
-| **9.1** | Options and startup validation | `GenerellemOptions` binds `McpServers` and `McpMaxBlobBytes` from the `Generellem` section. The validator rejects a bad name, a prefix collision, a missing command or URL, and a transport that sets both. An empty list passes on every profile. Tests cover one valid stdio entry, one valid HTTP entry, and each rejection. `appsettings.json` leaves the list empty |
+| **9.1** | Options and startup validation | ✅ Done — `GenerellemOptions` binds `McpServers` and `McpMaxBlobBytes` from the `Generellem` section. The validator rejects a bad name, a prefix collision, a missing command or URL, and a transport that sets both. An empty list passes on every profile. Tests cover one valid stdio entry, one valid HTTP entry, and each rejection. `appsettings.json` leaves the list empty |
 | **9.2** | Resource mapper | A pure mapper turns one listed resource plus its read result into a `DocumentInfo` or a seen-but-skipped URI. Tests cover text, HTML, a PDF blob chosen by MIME type, an extensionless URI that becomes `Unknown`, an oversized blob, and a read that returns no contents. `DocumentReference` is `mcp:{name}@{uri}` |
 | **9.3** | `McpDocumentSource` | Implements `IDocumentSource`. It connects with `McpClient.CreateAsync`, pages `ListResources`, reads each resource, and yields mapped documents. `Reference` is `mcp:{name}`. One failed read is logged and the URI stays seen. A failed connect throws before the first yield. Cancellation disposes the client. Logging includes the server name and URI and excludes headers, environment values, and document text |
 | **9.4** | Console factory | `EnterpriseDocumentSourceFactory` still returns `FileSystem` then `Website`, then one `McpDocumentSource` per configured server. `DemoDocumentSourceFactoryTests` still expects those two types when the list is empty, and expects a third source when one server is configured. `MSGraphDocumentSourceFactory` is unchanged. The library references `ModelContextProtocol.Core` only |
@@ -460,7 +460,7 @@ Phase 10 supplies `ChatMessage` and tool calls, so this phase does not invent a 
 | 6 — Performance | Complete | Shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation |
 | 7 — Hardening | Complete | Qdrant Testcontainers, InMemory CI smoke, coverage summary, Actions v4, Promptlet removed |
 | 8 — Advanced | Complete | Hybrid search, lexical rerank, image ingestion, streaming, sqlite-vec, .NET 10, semver tags |
-| 9 — MCP documents | Ready | `McpDocumentSource` beside File System and Website. No new product connectors. Independent of Phase 10 |
+| 9 — MCP documents | In progress | 9.1 options and startup validation. Next is 9.2, the resource mapper. Independent of Phase 10 |
 | 10 — `IChatClient` | In progress | 10.1 and 10.2 done. Endpoint settings, and `ExtractiveChatClient` on InMemory and Sqlite. Package version 2.0.0 |
 | 11 — MCP tools | Later | After Phase 9 and Phase 10. Tool loop on `IChatClient` |
 
@@ -476,6 +476,6 @@ Phase 10 supplies `ChatMessage` and tool calls, so this phase does not invent a 
 6. ~~Phase 6~~ — Complete (shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation)
 7. ~~Phase 7~~ — Complete (Qdrant Testcontainers, InMemory CI smoke, coverage, Actions v4, Promptlet removed)
 8. ~~Phase 8~~ — Complete (hybrid search, rerank, image ingestion, streaming, sqlite-vec, .NET 10)
-9. **Phase 9** — MCP document sources (ready, independent)
+9. **Phase 9** — MCP document sources (9.1 done, 9.2 next, independent of Phase 10)
 10. **Phase 10** — `IChatClient` for any chat model (10.1 and 10.2 done, independent of Phase 9)
 11. Phase 11 — MCP tools at query time, after Phase 9 and Phase 10

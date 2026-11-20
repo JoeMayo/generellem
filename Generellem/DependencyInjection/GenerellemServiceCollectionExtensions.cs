@@ -258,7 +258,89 @@ public static class GenerellemServiceCollectionExtensions
         BindOptionalString(section, nameof(GenerellemOptions.EmbeddingEndpoint), value => options.EmbeddingEndpoint = value);
         BindOptionalString(section, nameof(GenerellemOptions.EmbeddingApiKey), value => options.EmbeddingApiKey = value);
         BindOptionalString(section, nameof(GenerellemOptions.EmbeddingModel), value => options.EmbeddingModel = value);
+        BindMcp(section, options);
     }
+
+    static void BindMcp(IConfigurationSection section, GenerellemOptions options)
+    {
+        string? maxBlobText = section[nameof(GenerellemOptions.McpMaxBlobBytes)];
+        if (!string.IsNullOrWhiteSpace(maxBlobText))
+        {
+            if (!long.TryParse(maxBlobText, NumberStyles.Integer, CultureInfo.InvariantCulture, out long maxBlob) || maxBlob <= 0)
+                throw new InvalidOperationException(
+                    $"Generellem:McpMaxBlobBytes '{maxBlobText}' is invalid. Use a positive number of bytes.");
+
+            options.McpMaxBlobBytes = maxBlob;
+        }
+
+        List<McpServerOptions> servers = [];
+        foreach (IConfigurationSection child in Ordered(section.GetSection(nameof(GenerellemOptions.McpServers))))
+            servers.Add(BindMcpServer(child));
+
+        if (servers.Count > 0)
+            options.McpServers = servers;
+    }
+
+    static McpServerOptions BindMcpServer(IConfigurationSection section)
+    {
+        McpServerOptions server = new()
+        {
+            Name = section[nameof(McpServerOptions.Name)] ?? string.Empty,
+            Command = section[nameof(McpServerOptions.Command)] ?? string.Empty,
+            Url = section[nameof(McpServerOptions.Url)] ?? string.Empty,
+            Transport = ParseMcpTransport(section)
+        };
+
+        string? maxResourcesText = section[nameof(McpServerOptions.MaxResources)];
+        if (!string.IsNullOrWhiteSpace(maxResourcesText))
+        {
+            if (!int.TryParse(maxResourcesText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int maxResources) || maxResources <= 0)
+                throw new InvalidOperationException(
+                    $"Generellem:McpServers:{section.Key}:MaxResources '{maxResourcesText}' is invalid. Use a positive integer.");
+
+            server.MaxResources = maxResources;
+        }
+
+        foreach (IConfigurationSection argument in Ordered(section.GetSection(nameof(McpServerOptions.Arguments))))
+        {
+            if (argument.Value is not null)
+                server.Arguments.Add(argument.Value);
+        }
+
+        BindMap(section.GetSection(nameof(McpServerOptions.Environment)), server.Environment);
+        BindMap(section.GetSection(nameof(McpServerOptions.Headers)), server.Headers);
+        return server;
+    }
+
+    static McpTransport ParseMcpTransport(IConfigurationSection section)
+    {
+        string? text = section[nameof(McpServerOptions.Transport)];
+        if (string.IsNullOrWhiteSpace(text))
+            return McpTransport.Unspecified;
+
+        if (text.Equals("stdio", StringComparison.OrdinalIgnoreCase))
+            return McpTransport.Stdio;
+
+        if (text.Equals("http", StringComparison.OrdinalIgnoreCase))
+            return McpTransport.Http;
+
+        throw new InvalidOperationException(
+            $"Generellem:McpServers:{section.Key}:Transport '{text}' is invalid. Use stdio or http.");
+    }
+
+    static void BindMap(IConfigurationSection section, Dictionary<string, string> target)
+    {
+        foreach (IConfigurationSection child in section.GetChildren())
+        {
+            if (child.Value is not null)
+                target[child.Key] = child.Value;
+        }
+    }
+
+    static IEnumerable<IConfigurationSection> Ordered(IConfigurationSection section) =>
+        section.GetChildren()
+            .OrderBy(child => int.TryParse(child.Key, NumberStyles.None, CultureInfo.InvariantCulture, out int index) ? index : int.MaxValue)
+            .ThenBy(child => child.Key, StringComparer.Ordinal);
 
     static void BindOptionalString(IConfigurationSection section, string name, Action<string> assign)
     {

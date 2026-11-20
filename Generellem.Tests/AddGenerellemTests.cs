@@ -145,6 +145,101 @@ public class AddGenerellemTests
         Assert.Equal("https://api.mistral.ai/v1", opts.EmbeddingEndpoint);
         Assert.Equal("embed-key", opts.EmbeddingApiKey);
         Assert.Equal("mistral-embed", opts.EmbeddingModel);
+        Assert.Empty(opts.McpServers);
+        Assert.Equal(GenerellemOptions.DefaultMcpMaxBlobBytes, opts.McpMaxBlobBytes);
+    }
+
+    [Fact]
+    public void AddGenerellem_BindsMcpServers()
+    {
+        Dictionary<string, string?> values = new()
+        {
+            ["Generellem:McpMaxBlobBytes"] = "1048576",
+            ["Generellem:McpServers:1:Name"] = "docs",
+            ["Generellem:McpServers:1:Transport"] = "HTTP",
+            ["Generellem:McpServers:1:Url"] = "https://mcp.example.com/mcp",
+            ["Generellem:McpServers:1:Headers:Authorization"] = "Bearer placeholder",
+            ["Generellem:McpServers:0:Name"] = "notes",
+            ["Generellem:McpServers:0:Transport"] = "stdio",
+            ["Generellem:McpServers:0:Command"] = "npx",
+            ["Generellem:McpServers:0:Arguments:1"] = "server",
+            ["Generellem:McpServers:0:Arguments:0"] = "-y",
+            ["Generellem:McpServers:0:Environment:NOTES_ROOT"] = "/tmp",
+            ["Generellem:McpServers:0:MaxResources"] = "50"
+        };
+
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new MapConfiguration(values));
+        services.AddGenerellem(GenerellemProfile.InMemory);
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+        GenerellemOptions opts = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value;
+
+        Assert.Equal(1048576, opts.McpMaxBlobBytes);
+        Assert.Equal(2, opts.McpServers.Count);
+
+        McpServerOptions stdio = opts.McpServers[0];
+        Assert.Equal("notes", stdio.Name);
+        Assert.Equal(McpTransport.Stdio, stdio.Transport);
+        Assert.Equal("npx", stdio.Command);
+        Assert.Equal(["-y", "server"], stdio.Arguments);
+        Assert.Equal("/tmp", stdio.Environment["NOTES_ROOT"]);
+        Assert.Equal(50, stdio.MaxResources);
+        Assert.Empty(stdio.Headers);
+
+        McpServerOptions http = opts.McpServers[1];
+        Assert.Equal("docs", http.Name);
+        Assert.Equal(McpTransport.Http, http.Transport);
+        Assert.Equal("https://mcp.example.com/mcp", http.Url);
+        Assert.Equal("Bearer placeholder", http.Headers["Authorization"]);
+        Assert.Equal(McpServerOptions.DefaultMaxResources, http.MaxResources);
+        Assert.Empty(http.Arguments);
+        Assert.Empty(http.Environment);
+    }
+
+    [Fact]
+    public void AddGenerellem_InvalidMcpTransport_ThrowsWhenOptionsAreBuilt()
+    {
+        Dictionary<string, string?> values = new()
+        {
+            ["Generellem:McpServers:0:Name"] = "notes",
+            ["Generellem:McpServers:0:Transport"] = "websocket"
+        };
+
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new MapConfiguration(values));
+        services.AddGenerellem(GenerellemProfile.InMemory);
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => _ = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value);
+
+        Assert.Contains("Transport", ex.Message);
+        Assert.Contains("stdio", ex.Message);
+    }
+
+    [Fact]
+    public void AddGenerellem_InvalidMcpMaxBlobBytes_ThrowsWhenOptionsAreBuilt()
+    {
+        Dictionary<string, string?> values = new()
+        {
+            ["Generellem:McpMaxBlobBytes"] = "0"
+        };
+
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddSingleton<IConfiguration>(new MapConfiguration(values));
+        services.AddGenerellem(GenerellemProfile.InMemory);
+
+        using ServiceProvider sp = services.BuildServiceProvider();
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => _ = sp.GetRequiredService<IOptions<GenerellemOptions>>().Value);
+
+        Assert.Contains(nameof(GenerellemOptions.McpMaxBlobBytes), ex.Message);
     }
 
     [Fact]
@@ -218,11 +313,33 @@ public class AddGenerellemTests
             set => values[key] = value;
         }
 
-        public IEnumerable<IConfigurationSection> GetChildren() => [];
+        public IEnumerable<IConfigurationSection> GetChildren() => ChildrenOf(string.Empty);
 
         public IChangeToken GetReloadToken() => EmptyChangeToken.Instance;
 
         public IConfigurationSection GetSection(string key) => new MapSection(this, key);
+
+        IEnumerable<IConfigurationSection> ChildrenOf(string path)
+        {
+            string prefix = path.Length == 0 ? string.Empty : path + ":";
+            HashSet<string> seen = new(StringComparer.Ordinal);
+            foreach (string key in values.Keys)
+            {
+                if (prefix.Length > 0 && !key.StartsWith(prefix, StringComparison.Ordinal))
+                    continue;
+
+                string rest = key[prefix.Length..];
+                if (rest.Length == 0)
+                    continue;
+
+                int colon = rest.IndexOf(':');
+                string childKey = colon < 0 ? rest : rest[..colon];
+                if (childKey.Length == 0 || !seen.Add(childKey))
+                    continue;
+
+                yield return new MapSection(this, prefix + childKey);
+            }
+        }
 
         sealed class MapSection(MapConfiguration root, string path) : IConfigurationSection
         {
@@ -242,7 +359,7 @@ public class AddGenerellemTests
                 set => root[path + ":" + key] = value;
             }
 
-            public IEnumerable<IConfigurationSection> GetChildren() => [];
+            public IEnumerable<IConfigurationSection> GetChildren() => root.ChildrenOf(path);
 
             public IChangeToken GetReloadToken() => EmptyChangeToken.Instance;
 
