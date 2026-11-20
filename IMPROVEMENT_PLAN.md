@@ -5,7 +5,7 @@
 - **One step at a time** — finish, verify, then move on.
 - **Each step has a clear "done when"** so we know when to stop.
 - **Unit tests when practical** for each step.
-- **Phases 1–8 are complete.** Start the next change from a new plan.
+- **Phases 1–8 are complete.** Phase 9 (MCP documents) and Phase 10 (`IChatClient`) are independent and both ready. Phase 11 starts after both.
 
 ```mermaid
 flowchart LR
@@ -16,6 +16,10 @@ flowchart LR
     P5 --> P6[Phase 6\nPerformance]
     P6 --> P7[Phase 7\nHardening]
     P7 --> P8[Phase 8\nAdvanced]
+    P8 --> P9[Phase 9\nMCP documents]
+    P8 --> P10[Phase 10\nIChatClient]
+    P9 --> P11[Phase 11\nMCP tools]
+    P10 --> P11
 ```
 
 ---
@@ -279,6 +283,171 @@ dotnet run -- --profile Azure
 
 ---
 
+## Phase 9 — MCP document sources
+
+**Goal:** Ingest documents from MCP servers through the existing `IDocumentSource` pipeline. Notion, Google Docs, Loop, and a logged-in website are MCP servers the user runs. Generellem does not grow a connector per product.
+
+**Status:** Next. Not started.
+
+MCP resources are the same shape as `GetDocumentsAsync`: a list of items, then the bytes or text of each one. `Ingestion` already extracts text, hashes it, chunks it, embeds it, and deletes references that the source no longer returns. Phase 9 adds a source. It leaves chunking, embeddings, `ISearchService`, `ILlm`, and the query loop alone.
+
+### What stays
+
+- `FileSystem` and `Website` from `EnterpriseDocumentSourceFactory`. An empty MCP list is today's console. `dotnet run` still needs no extra process.
+- `MSGraphDocumentSourceFactory` and the OneDrive demo. Phase 9 does not add MCP there.
+- `IDocumentType` and `DocumentTypeFactory`. A blob is still a PDF, a Word file, or HTML. Text the server already extracted is not parsed again as a binary format.
+- `ILlm`, `IEmbedding`, and the four search backends. MCP has no chat-completion or embedding method. Sampling asks the host to call a model, which is the other direction. Replacing `ILlm` with `IChatClient` is Phase 10 and is not part of this phase.
+- Azure OpenAI, Ollama, and the extractive local answer, until Phase 10. Gemini, Anthropic, and Mistral do not become Generellem connector classes.
+
+### Configuration
+
+Add `McpServers` under the `Generellem` section. The default is an empty list. `GenerellemStartupValidator` checks the list on every profile. An empty list adds no errors and no servers.
+
+Each entry:
+
+| Field | Rule |
+|-------|------|
+| `Name` | Required. `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`. Unique. One name must not be a prefix of another. Deletion looks up `DocumentReference` with `StartsWith(Reference)`, so `notes` would also match `notes-extra`. |
+| `Transport` | `stdio` or `http`. |
+| `Command`, `Arguments`, `Environment` | `stdio` only. `Command` is required. `Url` is forbidden. |
+| `Url`, `Headers` | `http` only. `Url` is an absolute `http` or `https` URI. `Command` is forbidden. |
+| `MaxResources` | Optional. Default 10000. |
+
+`McpMaxBlobBytes` defaults to 20 MiB of decoded bytes. Headers and environment values are credentials. Do not log them, and do not put real secrets in `appsettings.json`. The README sample uses placeholders and points at environment variables or user secrets.
+
+`Reference` for a server is `mcp:{Name}`. `DocumentInfo` already builds `DocumentReference` as `{Reference}@{path}`, so a resource URI `wiki/home` on server `notes` is stored as `mcp:notes@wiki/home`. That prefix is what `RemoveDeletedDocumentsAsync` passes to `GetDocumentReferencesAsync`.
+
+### Mapping a resource to `DocumentInfo`
+
+`resources/list` is paged until the cursor is exhausted. `resources/templates/list` is not expanded. A template has no arguments in this phase.
+
+`resources/read` becomes one document:
+
+- A blob whose MIME type or URI extension maps to a type `DocumentTypeFactory` can process is the document. The stream is the decoded bytes. Known MIME types cover the extensions the factory already handles (`application/pdf` to `.pdf`, the Office MIME types, `text/html`, `text/markdown`, `text/plain`, and the image types). An unknown MIME type falls through to the URI extension. `Unknown` is skipped by ingestion, and the URI is still recorded as seen.
+- When no processable blob is present, text blocks are concatenated with newlines. `text/html` uses `Html`. `text/markdown` uses `Markdown`. Any other `text/*`, or a missing MIME type, uses `Text`.
+- A blob larger than `McpMaxBlobBytes` is skipped and logged. The URI is still seen.
+- A resource with no processable contents is skipped. The URI is still seen.
+
+"Seen" matters. `RemoveDeletedDocumentsAsync` deletes indexed documents whose references were not returned. A read that fails, a blob that is too large, or a type we cannot parse must still count as seen, so a transient failure does not delete the stored copy. A URI that is absent from a successful list is a real deletion.
+
+Connection, initialization, or listing failure throws out of `GetDocumentsAsync` before any document is yielded. `Ingestion` already catches that, logs it, and `continue`s, which skips deletion for that source. A successful list that is empty is a real empty source and does delete previously indexed documents for that prefix. Hitting `MaxResources` throws the same way as a connection failure. Truncating the list and then deleting the tail would be wrong.
+
+Dispose the client when the enumeration finishes or is cancelled. The stdio transport owns the child process, so dispose must end that process. Do not cache the client across ingest runs in this phase.
+
+### Steps
+
+| Step | Task | Done when |
+|------|------|-----------|
+| **9.1** | Options and startup validation | `GenerellemOptions` binds `McpServers` and `McpMaxBlobBytes` from the `Generellem` section. The validator rejects a bad name, a prefix collision, a missing command or URL, and a transport that sets both. An empty list passes on every profile. Tests cover one valid stdio entry, one valid HTTP entry, and each rejection. `appsettings.json` leaves the list empty |
+| **9.2** | Resource mapper | A pure mapper turns one listed resource plus its read result into a `DocumentInfo` or a seen-but-skipped URI. Tests cover text, HTML, a PDF blob chosen by MIME type, an extensionless URI that becomes `Unknown`, an oversized blob, and a read that returns no contents. `DocumentReference` is `mcp:{name}@{uri}` |
+| **9.3** | `McpDocumentSource` | Implements `IDocumentSource`. It connects with `McpClient.CreateAsync`, pages `ListResources`, reads each resource, and yields mapped documents. `Reference` is `mcp:{name}`. One failed read is logged and the URI stays seen. A failed connect throws before the first yield. Cancellation disposes the client. Logging includes the server name and URI and excludes headers, environment values, and document text |
+| **9.4** | Console factory | `EnterpriseDocumentSourceFactory` still returns `FileSystem` then `Website`, then one `McpDocumentSource` per configured server. `DemoDocumentSourceFactoryTests` still expects those two types when the list is empty, and expects a third source when one server is configured. `MSGraphDocumentSourceFactory` is unchanged. The library references `ModelContextProtocol.Core` only |
+| **9.5** | In-process round trip | A test hosts an MCP server in-process over the SDK's stream transport (`Pipe` plus `StreamServerTransport` / `StreamClientTransport`). No `npx`, Docker, or network. The source yields a text resource and a small blob, skips a failing read without dropping its URI, and a second list that omits a URI leaves that URI out of the seen set. The test project may reference `ModelContextProtocol` for the in-process server |
+| **9.6** | README | A short Configure section shows one stdio entry and one HTTP entry with placeholder secrets. It states that built-in sources still run, that the server decides which resources exist, and that Generellem stores only what a successful read returns |
+
+**Estimated effort:** one step per session.
+
+**Dependencies:** Phases 1–8. No dependency on Phase 10 or Phase 11.
+
+### Left for later
+
+- Resource subscriptions and `resources/updated`. A full list plus the existing content hash is the change signal.
+- Resource templates, prompts, sampling, and tools. Tools are Phase 11.
+- Generellem exposing itself as an MCP server.
+- OAuth inside Generellem. The user passes headers or environment values through to a server that already knows how to sign in.
+- Replacing `FileSystem`, `Website`, or OneDrive with an MCP server.
+
+---
+
+## Phase 10 — Any chat model via `IChatClient`
+
+**Goal:** Use Gemini, Anthropic, Mistral, and the next service without a Generellem connector for each one. The RAG pipeline calls `IChatClient` from `Microsoft.Extensions.AI`. A new model is an OpenAI-compatible endpoint plus a model name, or an `IChatClient` the host registers.
+
+**Status:** In progress. 10.1 is done. Independent of Phase 9.
+
+`ILlm` is a small interface, and the pipeline does not use it that way. `GenerellemDefaultRag.BuildRequestAsync` always builds an `AzureOpenAIChatRequest` of `OpenAI.Chat.ChatMessage`. `OllamaLlm` and `LocalLlmService` accept only that request. `LlmReranker` casts the response to `AzureOpenAIChatResponse`. Both demos store history in `Queue<OpenAI.Chat.ChatMessage>`. A Gemini or Anthropic class would have to pretend to be Azure. Phase 10 removes that shape from the pipeline.
+
+### Boundary
+
+- The library references `Microsoft.Extensions.AI.Abstractions`. It uses `IChatClient`, `ChatMessage`, `ChatOptions`, and `IEmbeddingGenerator<string, Embedding<float>>`.
+- The built-in client is the OpenAI SDK pointed at `OpenAIClientOptions.Endpoint` (`AsIChatClient()`). `Azure.AI.OpenAI` is already on the dependency graph. Raise that package if `AsIChatClient()` is missing from 2.1.0.
+- The library does not reference Anthropic, Google, or Mistral packages. A test reads the `Generellem` assembly references and fails if those names appear.
+- Temperature is passed through on `ChatOptions`. Generellem does not clamp it. OpenAI accepts 0–2 and Mistral accepts 0–1, and the provider enforces its own range.
+- Chat history in `IRag`, `IGenerellemQuery`, and both demos is `IList<ChatMessage>` from `Microsoft.Extensions.AI`.
+
+### Two ways to select a model
+
+1. **OpenAI-compatible settings.** `ChatEndpoint`, `ChatApiKey`, and `ChatModel` under the `Generellem` section. This covers Mistral, Groq, OpenRouter, Together, vLLM, LM Studio, Ollama at `http://localhost:11434/v1`, and Gemini's OpenAI-compatible endpoint. A blank API key is allowed when the endpoint is loopback. When the endpoint is set, the model name is required.
+2. **Host registration.** The host replaces the `IChatClient` registration. Anthropic and Google SDKs that expose `AsIChatClient()` are referenced by `GenerellemConsole` or the caller's app, not by the library. Azure AD authentication stays this kind of override. An API key for Azure OpenAI uses the built-in client.
+
+The Ollama profile becomes the built-in client at `{OllamaEndpoint}/v1` with `OllamaChatModel`. The hand-rolled `OllamaLlm` HTTP path goes away once the stub-handler tests match today's request and stream behavior.
+
+InMemory and Sqlite register an `ExtractiveChatClient` that Generellem owns. It returns the same extractive answer `LocalLlmService` returns today. It never calls a network and never requests a tool.
+
+### Embeddings
+
+Embeddings are a second registration. Anthropic has no embeddings API, so the chat provider and the embedding provider may differ.
+
+- `EmbeddingEndpoint`, `EmbeddingApiKey`, and `EmbeddingModel` select an OpenAI-compatible embeddings endpoint. `EmbeddingDimensions` still has to match the index.
+- The Ollama profile uses `{OllamaEndpoint}/v1` and `OllamaEmbeddingModel` when those fields are blank.
+- The Azure profile keeps its Azure OpenAI embedding deployment.
+- InMemory and Sqlite keep `DeterministicEmbeddingService`.
+- `IEmbedding` stays the ingestion API (`EmbedAsync` chunks a document). The vector call inside it goes through `IEmbeddingGenerator<string, Embedding<float>>`.
+
+### Steps
+
+| Step | Task | Done when |
+|------|------|-----------|
+| **10.1** | Package and options | ✅ Done — `Microsoft.Extensions.AI.Abstractions` 10.11.0. `ChatEndpoint`, `ChatApiKey`, `ChatModel`, `EmbeddingEndpoint`, `EmbeddingApiKey`, and `EmbeddingModel` bind from the `Generellem` section and stay empty in `appsettings.json`. A set endpoint must be an absolute http(s) URI and must name a model. A blank API key is allowed only for a loopback endpoint. Package version is 2.0.0 |
+| **10.2** | Extractive client | `ExtractiveChatClient` implements `IChatClient` and reproduces `LocalLlmService` answers, including the stream that concatenates to the same text. InMemory and Sqlite register it. Existing ask and stream tests pass |
+| **10.3** | OpenAI-compatible client | A stub `HttpMessageHandler` proves one non-streaming call and one streaming call against `/v1/chat/completions`, with the configured model and bearer key. The Ollama profile registers this client at `{OllamaEndpoint}/v1`. No live Ollama in CI |
+| **10.4** | Pipeline uses `IChatClient` | `GenerellemDefaultRag`, `AzureOpenAIQuery`, `LlmReranker`, and both demos take `IList<ChatMessage>` and call `IChatClient`. They do not mention `AzureOpenAIChatRequest`, `AzureOpenAIChatResponse`, or `OpenAI.Chat`. Intent summary is one `GetResponseAsync` call. Temperature is `ChatOptions.Temperature` |
+| **10.5** | Embeddings | An OpenAI-compatible `IEmbeddingGenerator<string, Embedding<float>>` serves the Ollama profile and a configured embedding endpoint, proved with a stub handler against `/v1/embeddings`. Azure embeddings and `DeterministicEmbeddingService` stay. A mismatch between the returned vector length and `EmbeddingDimensions` fails the call |
+| **10.6** | Azure registration | The Azure profile registers `IChatClient` through the Azure OpenAI SDK's `AsIChatClient()` using the existing API key and deployment. RAG code has no Azure chat types. A host can replace `IChatClient` after `AddGenerellem` for Entra or another vendor |
+| **10.7** | Remove the old chat types | `ILlm`, `AzureOpenAILlm`, `OllamaLlm`, `LocalLlmService`, `AzureOpenAIChatRequest`, and `AzureOpenAIChatResponse` are deleted when nothing references them. The assembly-reference test fails if `Generellem` references Anthropic, Google.GenAI, or Mistral |
+| **10.8** | README | Shows a Mistral-shaped OpenAI-compatible example with a placeholder key, shows the Ollama profile as that same client, and shows a host replacing `IChatClient` for a vendor SDK. States that embeddings are configured separately and that Generellem ships no per-vendor connector |
+
+**Estimated effort:** 10.4 is the large step. The others are one session each.
+
+**Dependencies:** Phases 1–8. No dependency on Phase 9.
+
+### Left for later
+
+- A Generellem class per vendor. That is the outcome this phase exists to avoid.
+- Clamping temperature or rewriting tool schemas per provider. `IChatClient` and the provider SDK own that.
+- MCP tool calls. Those are Phase 11, on `ChatOptions` of this client.
+
+---
+
+## Phase 11 — MCP tools at query time
+
+**Goal:** On any `IChatClient` that can request tools, a question can call tools on the MCP servers from Phase 9. Retrieval stays. The tool result is additional untrusted context. The extractive client never requests a tool.
+
+**Status:** Recorded. Starts after Phase 9 and Phase 10.
+
+Phase 10 supplies `ChatMessage` and tool calls, so this phase does not invent a transcript. The `McpServers` list is the set of servers. A server with no tools is ingest-only and the loop ignores it.
+
+### Steps
+
+| Step | Task | Done when |
+|------|------|-----------|
+| **11.1** | Tool loop | After the current retrieval path, the query client passes the servers' tools on `ChatOptions` and answers tool calls until the model returns text or 4 rounds have run. Tool output is wrapped as untrusted context, the same way retrieved chunks are. A tool failure is a tool result the model can see, and it does not throw out of `AskAsync` |
+| **11.2** | MCP tools | The loop uses `tools/list` and `tools/call` on the configured servers through the Phase 9 client transport. `ExtractiveChatClient` is not given tools, and the InMemory profile never opens an MCP client during a question |
+| **11.3** | Streaming | `AskStreamAsync` yields tokens, finishes a tool call without yielding the raw tool payload as if it were the answer, then yields the following tokens. `AskAsync` stays one string |
+| **11.4** | Tests | An in-process MCP server exposes one tool. A scripted `IChatClient` requests that tool once and then answers. The final text includes the tool output |
+| **11.5** | README | Documents that tools run only when the registered `IChatClient` requests them, that the round limit is 4, and that a server with no tools is still ingested |
+
+**Estimated effort:** one step per session. The transcript work that used to sit here is Phase 10.
+
+**Dependencies:** Phase 9 for server options and the client transport. Phase 10 for `IChatClient`.
+
+### Left for later
+
+- MCP prompts filling the system message.
+- Sampling, elicitation, and Generellem as an MCP server.
+
+---
+
 ## Tracking
 
 | Phase | Status | Notes |
@@ -291,6 +460,9 @@ dotnet run -- --profile Azure
 | 6 — Performance | Complete | Shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation |
 | 7 — Hardening | Complete | Qdrant Testcontainers, InMemory CI smoke, coverage summary, Actions v4, Promptlet removed |
 | 8 — Advanced | Complete | Hybrid search, lexical rerank, image ingestion, streaming, sqlite-vec, .NET 10, semver tags |
+| 9 — MCP documents | Ready | `McpDocumentSource` beside File System and Website. No new product connectors. Independent of Phase 10 |
+| 10 — `IChatClient` | In progress | 10.1 done. OpenAI-compatible endpoint settings and startup checks. Package version 2.0.0. No per-vendor connector |
+| 11 — MCP tools | Later | After Phase 9 and Phase 10. Tool loop on `IChatClient` |
 
 ---
 
@@ -304,3 +476,6 @@ dotnet run -- --profile Azure
 6. ~~Phase 6~~ — Complete (shared Qdrant client, batched embeddings, demo run modes, collection cache invalidation)
 7. ~~Phase 7~~ — Complete (Qdrant Testcontainers, InMemory CI smoke, coverage, Actions v4, Promptlet removed)
 8. ~~Phase 8~~ — Complete (hybrid search, rerank, image ingestion, streaming, sqlite-vec, .NET 10)
+9. **Phase 9** — MCP document sources (ready, independent)
+10. **Phase 10** — `IChatClient` for any chat model (10.1 done, independent of Phase 9)
+11. Phase 11 — MCP tools at query time, after Phase 9 and Phase 10

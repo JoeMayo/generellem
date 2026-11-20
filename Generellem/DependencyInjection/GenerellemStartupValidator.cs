@@ -46,6 +46,24 @@ public class GenerellemStartupValidator(
         if (opts.EnableImageVision && string.IsNullOrWhiteSpace(opts.VisionModel))
             errors.Add($"{nameof(GenerellemOptions.VisionModel)} is required when {nameof(GenerellemOptions.EnableImageVision)} is true.");
 
+        ValidateOpenAiCompatibleEndpoint(
+            errors,
+            opts.ChatEndpoint,
+            opts.ChatModel,
+            opts.ChatApiKey,
+            nameof(GenerellemOptions.ChatEndpoint),
+            nameof(GenerellemOptions.ChatModel),
+            nameof(GenerellemOptions.ChatApiKey));
+
+        ValidateOpenAiCompatibleEndpoint(
+            errors,
+            opts.EmbeddingEndpoint,
+            opts.EmbeddingModel,
+            opts.EmbeddingApiKey,
+            nameof(GenerellemOptions.EmbeddingEndpoint),
+            nameof(GenerellemOptions.EmbeddingModel),
+            nameof(GenerellemOptions.EmbeddingApiKey));
+
         if (opts.Profile == GenerellemProfile.Ollama)
         {
             if (string.IsNullOrWhiteSpace(opts.OllamaEndpoint))
@@ -85,6 +103,34 @@ public class GenerellemStartupValidator(
             GenerellemProfile.Azure => AzureKeys(options),
             _ => []
         };
+
+    static void ValidateOpenAiCompatibleEndpoint(
+        List<string> errors,
+        string endpoint,
+        string model,
+        string apiKey,
+        string endpointName,
+        string modelName,
+        string apiKeyName)
+    {
+        if (string.IsNullOrWhiteSpace(endpoint))
+            return;
+
+        if (!IsAbsoluteHttpUri(endpoint))
+            errors.Add($"{endpointName} must be an absolute http or https URI.");
+        else if (string.IsNullOrWhiteSpace(apiKey) && !IsLoopback(endpoint))
+            errors.Add($"{apiKeyName} is required when {endpointName} is not a loopback address.");
+
+        if (string.IsNullOrWhiteSpace(model))
+            errors.Add($"{modelName} is required when {endpointName} is set.");
+    }
+
+    static bool IsAbsoluteHttpUri(string endpoint) =>
+        Uri.TryCreate(endpoint.Trim(), UriKind.Absolute, out Uri? uri) &&
+        uri.Scheme is "http" or "https";
+
+    static bool IsLoopback(string endpoint) =>
+        Uri.TryCreate(endpoint.Trim(), UriKind.Absolute, out Uri? uri) && uri.IsLoopback;
 
     static IReadOnlyList<string> AzureKeys(GenerellemOptions options)
     {

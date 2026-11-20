@@ -5,7 +5,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<Title>Generellem</Title>
-		<Version>1.1.0</Version>
+		<Version>2.0.0</Version>
 		<Authors>JoeAtGenerellemAI</Authors>
 		<Company>Generellem, Inc.</Company>
 		<Description>Open-Source RAG framework for C# and other .NET developers.</Description>
@@ -16,7 +16,9 @@
 		<RepositoryUrl>https://github.com/JoeMayo/generellem</RepositoryUrl>
 		<RepositoryType>git</RepositoryType>
 		<PackageTags>ai, generative ai, generellem, llm</PackageTags>
-		<PackageReleaseNotes>1.1.0 adds hybrid search, reranking, image text and vision ingestion, streamed answers, sqlite-vec indexing, and the .NET 10 target. Package versions follow semantic versioning. Push a vMAJOR.MINOR.PATCH tag to publish a GitHub release.
+		<PackageReleaseNotes>2.0.0 adds configuration for an OpenAI-compatible chat endpoint and embedding endpoint. The query pipeline is unchanged. Package versions follow semantic versioning. Push a vMAJOR.MINOR.PATCH tag to publish a GitHub release.
+
+1.1.0 adds hybrid search, reranking, image text and vision ingestion, streamed answers, sqlite-vec indexing, and the .NET 10 target. Package versions follow semantic versioning. Push a vMAJOR.MINOR.PATCH tag to publish a GitHub release.
 
 1.0.0 was the first stable release, with file system, web, and OneDrive ingestion.</PackageReleaseNotes>
 		<PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
@@ -63,6 +65,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.14" />
+		<PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.11.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.14" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
